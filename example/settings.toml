@@ -1,0 +1,6 @@
+[server]
+timeout = "30s"
+level = "warn"
+
+[database]
+writer_url = "postgres://writer@db/app"

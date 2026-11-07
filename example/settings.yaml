@@ -1,0 +1,6 @@
+server:
+  timeout: 10s
+  level: debug
+database:
+  writer_url: postgres://writer@db/app
+  pool_max_conns: 20
