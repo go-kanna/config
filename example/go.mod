@@ -7,9 +7,9 @@ toolchain go1.27.3
 tool github.com/go-kanna/config/cmd/kanna-config
 
 require (
-	github.com/go-kanna/config v0.0.1
-	github.com/go-kanna/config/toml v0.0.1
-	github.com/go-kanna/config/yaml v0.0.1
+	github.com/go-kanna/config v0.0.2
+	github.com/go-kanna/config/toml v0.0.2
+	github.com/go-kanna/config/yaml v0.0.2
 	github.com/go-kanna/validate v0.0.25
 )
 

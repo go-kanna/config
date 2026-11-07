@@ -1,11 +1,11 @@
 github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk=
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/go-kanna/config v0.0.1 h1:CU4OzIT2Ds35OqSUnwlh0YAMhYdizaE3UOthH314Cq0=
-github.com/go-kanna/config v0.0.1/go.mod h1:L1pnpP1bf6ThXHr+hPOpwPDsEE0fD5qMiSUHvnR4a60=
-github.com/go-kanna/config/toml v0.0.1 h1:iK3eRn8BIdmhoHYsqj9d4f2x0SVdoKqTkkRScY6HABE=
-github.com/go-kanna/config/toml v0.0.1/go.mod h1:E5fMMct2u1jUEjaUU2/Et+r7aw6i6cg0s09d+fg05EM=
-github.com/go-kanna/config/yaml v0.0.1 h1:oh85N1n7aj0BRC3afYwwyajbFkBhDEvDgZrmAuRoDIA=
-github.com/go-kanna/config/yaml v0.0.1/go.mod h1:uNLVhcw9ZoEPkcWkrSQ7loFvUvaVJZOxZztypXWlz3A=
+github.com/go-kanna/config v0.0.2 h1:DffwMBOD6AMm8Nx3rE1xhsoceVuzZikPjlUv9BhK2Q0=
+github.com/go-kanna/config v0.0.2/go.mod h1:L1pnpP1bf6ThXHr+hPOpwPDsEE0fD5qMiSUHvnR4a60=
+github.com/go-kanna/config/toml v0.0.2 h1:WzNb1UYlm35Yb+YcuYskybalCvkZEafODaMF6lt7MVQ=
+github.com/go-kanna/config/toml v0.0.2/go.mod h1:E5fMMct2u1jUEjaUU2/Et+r7aw6i6cg0s09d+fg05EM=
+github.com/go-kanna/config/yaml v0.0.2 h1:2GqQ6tZ7bb0kJo4YpV0ahJHOsRKkP/fGzpDJ53+9LQo=
+github.com/go-kanna/config/yaml v0.0.2/go.mod h1:uNLVhcw9ZoEPkcWkrSQ7loFvUvaVJZOxZztypXWlz3A=
 github.com/go-kanna/internal v0.0.29 h1:uah0X2Dh36pvf/1F/7EvL7tcLJzRyDiuzhvY7fnXzSA=
 github.com/go-kanna/internal v0.0.29/go.mod h1:Df477EkeFmw5w4hFNoBGUZfZJfgKJnaemuReERxK7to=
 github.com/go-kanna/validate v0.0.25 h1:G8dzlBJhfp5xTXDn+4unCd+gJ9nzsJDIk8Gn3p904U4=
