@@ -19,7 +19,7 @@ go get github.com/go-kanna/config github.com/go-kanna/validate
 生成コードが import するのは、このモジュールの [`source`](source) パッケージ、go-kanna/validate のランタイム、読む [kanna-value](https://github.com/go-kanna/value) の型のコンストラクタです。YAML と TOML のファイルは、それぞれ別のモジュールが読みます。それを読むプログラムだけが require します:
 
 ```sh
-go get github.com/go-kanna/config/yaml   # または github.com/go-kanna/config/toml
+go get github.com/go-kanna/config/yaml   # or github.com/go-kanna/config/toml
 ```
 
 ## 使い方
@@ -127,7 +127,7 @@ validate: DATABASE_WRITER_URL: blank; database.pool_max_conns: greater_than_or_e
 ```go
 //kanna:config prefix=oauth
 type OAuth struct {
-	ClientID string `validate:"required"` // OAUTH_CLIENT_ID、oauth.client_id、-oauth-client-id
+	ClientID string `validate:"required"` // OAUTH_CLIENT_ID, oauth.client_id, -oauth-client-id
 }
 ```
 
