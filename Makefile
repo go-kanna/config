@@ -5,7 +5,7 @@ BUILD_DIR = bin
 
 .PHONY: test
 test:
-	@for dir in $$(go list -m -f '{{.Dir}}'); do \
+	@for dir in . toml yaml; do \
 		echo ">>> test $$dir"; \
 		(cd $$dir && go test ./... -race -coverprofile=coverage.out -covermode=atomic) || exit 1; \
 	done
