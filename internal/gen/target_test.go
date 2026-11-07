@@ -191,7 +191,13 @@ func TestTargets_Fine(t *testing.T) {
 type Settings struct {
 	Secret string `+"`config:\"-\" validate:\"required\"`"+`
 	Port   int    `+"`validate:\"gte=1\" default:\"8080\"`"+`
+	Level  Level  `+"`validate:\"required\" default:\"0\"`"+`
 }
+
+// Level counts from 0, which its IsZero does not take for unset.
+type Level int
+
+func (Level) IsZero() bool { return false }
 
 //kanna:config
 type Empty struct{}
