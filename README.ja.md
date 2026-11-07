@@ -185,7 +185,7 @@ type Database struct {
 }
 ```
 
-文字列、bool、数、`time.Duration`、kanna-value の enum の既定値は、生成時に読み、Go の値（`x.PoolMaxConns = 10`、`x.DialTimeout = 5 * time.Second`、enum の定数）として書き出します。読めなければ生成を止めます。そのうえで、値だけで、プログラムのコードを動かさず、ほかのフィールドなしに判定できるルール（`required`、長さ、比較、`oneof`、`pattern`）を当てます。拒否されれば生成を止めます。設定しない限り、起動のたびに失敗するからです。`rule=Type`、`eqfield`、`email`、`url`、`uuid`、フックは読むときに確かめます。kanna-value の値オブジェクトと `UnmarshalText` を持つ型の既定値は、設定と同じく、どこにも設定されていないときに読みます。
+文字列、bool、数、`time.Duration`、kanna-value の enum の既定値は、生成時に読み、Go の値（`x.PoolMaxConns = 10`、`x.DialTimeout = 5 * time.Second`、enum の定数）として書き出します。`NaN` と `+Inf` は定数で表せないので `math.NaN()` と `math.Inf(1)` で書き、ルールは読むときに確かめます。読めなければ生成を止めます。そのうえで、値だけで、プログラムのコードを動かさず、ほかのフィールドなしに判定できるルール（`required`、長さ、比較、`oneof`、`pattern`）を当てます。拒否されれば生成を止めます。設定しない限り、起動のたびに失敗するからです。`rule=Type`、`eqfield`、`email`、`url`、`uuid`、フックは読むときに確かめます。kanna-value の値オブジェクトと `UnmarshalText` を持つ型の既定値は、設定と同じく、どこにも設定されていないときに読みます。
 
 ## 読める型
 

@@ -105,3 +105,15 @@ func (p Paths) validate(errs *validate.Errors) {
 		errs.Add("host.name", validate.Fail("dash"))
 	}
 }
+
+// Factor is a float of its own.
+type Factor float64
+
+// Limits has defaults that no constant holds.
+//
+//kanna:config
+type Limits struct {
+	Floor   float64 `default:"-Inf" validate:"lte=0"`
+	Ceiling float32 `default:"+Inf"`
+	Scale   Factor  `default:"NaN"`
+}

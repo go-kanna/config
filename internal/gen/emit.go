@@ -268,6 +268,12 @@ func (l *loader) defaultExpr(fd field) string {
 		return c.Name()
 	case fd.read.kind == readDuration:
 		return durationExpr(fd.def.dur, l.f.Import("time", "time"))
+	case fd.def.mathCall != "":
+		v := l.f.Import("math", "math") + "." + fd.def.mathCall
+		if l.is(fd.read.typ, types.Float64) {
+			return v
+		}
+		return l.convert(fd.read.typ, v)
 	}
 	return fd.def.lit
 }
