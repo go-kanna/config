@@ -2,7 +2,6 @@ package toml_test
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -46,10 +45,22 @@ func TestDecode_Empty(t *testing.T) {
 	}
 }
 
+// An error says where the document is wrong, never what it holds there, which
+// may be a secret.
 func TestDecode_Error(t *testing.T) {
 	t.Parallel()
 
-	if _, err := toml.Decode([]byte("port = \n")); err == nil || !strings.Contains(err.Error(), "decode TOML") {
-		t.Errorf("Decode error = %v", err)
+	for _, tt := range []struct {
+		name, data, want string
+	}{
+		{"no value", "port = \n", "line 1, column 8 is not valid TOML"},
+		{"too big", "[db]\npin = 99999999999999999999\n", "line 2, column 7 is not valid TOML"},
+		{"bad escape", "[db]\npassword = \"s3\\qcr3t\"\n", "line 2, column 13 is not valid TOML"},
+		{"bare", "[db]\npassword = s3cr3t\n", "line 2, column 12 is not valid TOML"},
+	} {
+		_, err := toml.Decode([]byte(tt.data))
+		if err == nil || err.Error() != tt.want {
+			t.Errorf("%s: Decode error = %v, want %q", tt.name, err, tt.want)
+		}
 	}
 }

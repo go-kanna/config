@@ -205,7 +205,7 @@ func TestOpen_Errors(t *testing.T) {
 		{
 			name: "not JSON",
 			file: source.File{Path: writeFile(t, "bad.json", `{"a":`), Decode: source.JSON},
-			want: "decode JSON",
+			want: "line 1, column 6 is not valid JSON",
 		},
 		{name: "no decoder", file: source.File{Path: writeFile(t, "a.json", `{}`)}, want: "no Decode"},
 	}
@@ -244,8 +244,26 @@ func TestJSON(t *testing.T) {
 	if tree, err := source.JSON([]byte("null")); err != nil || tree == nil || len(tree) != 0 {
 		t.Errorf("JSON(null) = %v, %v, want no sections", tree, err)
 	}
-	if _, err := source.JSON([]byte(`{} {}`)); err == nil {
-		t.Errorf("JSON of two objects: no error")
+}
+
+// An error says where the data is wrong, never what it holds there, which may
+// be a secret.
+func TestJSON_Error(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name, data, want string
+	}{
+		{"a bare word", `{"db": {"password": s3cr3t}}`, "line 1, column 21 is not valid JSON"},
+		{"a bad escape", "{\"db\":\n  {\"password\": \"s3\\qcr3t\"}}", "line 2, column 20 is not valid JSON"},
+		{"two objects", "{}\n {}", "line 2, column 2 is not valid JSON"},
+		{"a string", ` "s3cr3t"`, "line 1, column 2 is not a JSON object"},
+		{"nothing", ``, "not valid JSON"},
+	} {
+		_, err := source.JSON([]byte(tt.data))
+		if err == nil || err.Error() != tt.want {
+			t.Errorf("%s: JSON error = %v, want %q", tt.name, err, tt.want)
+		}
 	}
 }
 

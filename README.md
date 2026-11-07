@@ -161,6 +161,8 @@ api:
 
 A value in a file is read as its text, as a variable is: `20` and `"20"` read the same. A section or a list where a value goes is an error. A null is unset.
 
+A file that does not decode is reported by where it is wrong, such as `read config/production.yaml: line 2, column 13 is not valid YAML`, and not by what the library decoding it says, which may quote a secret written there. A `Decode` of your own should say no more either: `source.Open` returns its error as it is.
+
 ## Fields not read
 
 Each field of the struct is read. An unexported field, an embedded one, and one named `_` cannot be, and stop the run. Tag a field the settings do not give `config:"-"`, such as a password the program reads from a secret manager after `LoadX`:
