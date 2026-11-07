@@ -1,8 +1,10 @@
 # config
 
 [![CI](https://github.com/go-kanna/config/actions/workflows/ci.yaml/badge.svg)](https://github.com/go-kanna/config/actions/workflows/ci.yaml)
+[![codecov](https://codecov.io/gh/go-kanna/config/graph/badge.svg)](https://codecov.io/gh/go-kanna/config)
 [![Go Reference](https://pkg.go.dev/badge/github.com/go-kanna/config.svg)](https://pkg.go.dev/github.com/go-kanna/config)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/tag/go-kanna/config?label=release&sort=semver&filter=v*)](https://github.com/go-kanna/config/tags)
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README.md)
 
 kanna-config は、設定の構造体を、フラグ、環境変数、ファイルから読み、[kanna-validate](https://github.com/go-kanna/validate) の `validate` タグで確かめる関数を生成します。各設定の名前は、構造体とフィールドの名前で決まります。生成されるのは、各設定を `strconv` で読み、各ルールを確かめる素の Go で、リフレクションは使いません。誤りは、設定した場所での名前（環境変数、ファイルのキー、フラグ）で報告します。
