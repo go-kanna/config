@@ -62,7 +62,8 @@ type File struct {
 
 	// Decode reads the file into its sections, such as JSON does. The modules
 	// github.com/go-kanna/config/yaml and github.com/go-kanna/config/toml
-	// read the other formats.
+	// read the other formats. Open returns its error as it is, which should
+	// say where the data is wrong, never what it holds, which may be a secret.
 	Decode func(data []byte) (map[string]any, error)
 }
 

@@ -3,6 +3,7 @@ package gen_test
 import (
 	"flag"
 	"log/slog"
+	"math"
 	"net/netip"
 	"os"
 	"path/filepath"
@@ -24,7 +25,7 @@ func clearEnv(t *testing.T) {
 		"DATABASE_ADMIN_URL", "DATABASE_WRITER_URL", "DATABASE_POOL_MAX_CONNS", "DATABASE_DIAL_TIMEOUT",
 		"DATABASE_RATIO", "DATABASE_DEBUG", "DATABASE_RETRIES", "OAUTH_CLIENT_ID", "OAUTH_CLIENT_ID_FILE",
 		"OAUTH_TOKEN", "PORT", "API_MODE", "API_ADMIN", "API_PUBLIC", "API_LEVEL", "API_LISTEN", "API_NAME",
-		"API_ALIAS",
+		"API_ALIAS", "PATHS_HOST", "PATHS_HOST_NAME", "LIMITS_FLOOR", "LIMITS_CEILING", "LIMITS_SCALE",
 	} {
 		t.Setenv(name, "")
 	}
@@ -233,5 +234,31 @@ func TestGenerated_Hook(t *testing.T) {
 	want := "validate: PORT: greater_than_or_equal_to (count=1); API_ALIAS: same_as_name"
 	if got := errString(err); got != want {
 		t.Errorf("LoadAPI error = %q, want %q", got, want)
+	}
+}
+
+// What the hook reports goes under the field whose JSON name is the longest
+// the path begins with, not under the first declared.
+func TestGenerated_HookLongestPath(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("PATHS_HOST_NAME", "-")
+
+	_, err := emit.LoadPaths(source.Env())
+	if got, want := errString(err), "validate: PATHS_HOST_NAME: dash"; got != want {
+		t.Errorf("LoadPaths error = %q, want %q", got, want)
+	}
+}
+
+// A default that no constant holds is written as the call of package math
+// returning it, converted to the field's type.
+func TestGenerated_NonFiniteDefaults(t *testing.T) { //nolint:paralleltest // it sets variables of the process
+	clearEnv(t)
+
+	got, err := emit.LoadLimits(source.Env())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !math.IsInf(got.Floor, -1) || !math.IsInf(float64(got.Ceiling), 1) || !math.IsNaN(float64(got.Scale)) {
+		t.Errorf("LoadLimits = %+v, want -Inf, +Inf, and NaN", got)
 	}
 }

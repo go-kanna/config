@@ -4,6 +4,7 @@ import (
 	"go/constant"
 	"go/token"
 	"go/types"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -88,11 +89,13 @@ type defaultValue struct {
 
 	// value is the default read, for a reader whose default is static; lit is
 	// it as a Go literal, dur it as a duration, and enum the constant holding
-	// it.
-	value constant.Value
-	lit   string
-	dur   time.Duration
-	enum  *types.Const
+	// it. A NaN or an infinity, which no constant holds, has no value, and
+	// mathCall calls the function of package math returning it instead.
+	value    constant.Value
+	lit      string
+	dur      time.Duration
+	enum     *types.Const
+	mathCall string
 }
 
 // targets returns the structs marked //kanna:config in pkgs, and says what is
@@ -307,7 +310,16 @@ func defaultOf(fset *token.FileSet, r reader, text string, s scan.Struct) (*defa
 		if err != nil {
 			return bad()
 		}
-		def.value, def.lit = constant.MakeFloat64(n), strconv.FormatFloat(n, 'g', -1, r.bits)
+		switch {
+		case math.IsNaN(n):
+			def.mathCall = "NaN()"
+		case math.IsInf(n, 1):
+			def.mathCall = "Inf(1)"
+		case math.IsInf(n, -1):
+			def.mathCall = "Inf(-1)"
+		default:
+			def.value, def.lit = constant.MakeFloat64(n), strconv.FormatFloat(n, 'g', -1, r.bits)
+		}
 	case readDuration:
 		d, err := time.ParseDuration(text)
 		if err != nil {
@@ -345,10 +357,12 @@ func bitsOr(bits int) int {
 	return bits
 }
 
-// collisions reports two fields of a struct read from one setting.
+// collisions reports two fields of a struct read from one setting, and a field
+// whose variable is the one naming the file of another's, NAME_FILE.
 func collisions(fields []field) []diag.Diag {
 	var diags []diag.Diag
 	seen := map[string]string{}
+	vars := map[string]string{}
 	for _, f := range fields {
 		for _, name := range []string{
 			"variable " + f.key.env, "key " + strings.Join(f.key.file, "."), "flag -" + f.key.flag,
@@ -358,6 +372,16 @@ func collisions(fields []field) []diag.Diag {
 				continue
 			}
 			seen[name] = f.Name
+		}
+		vars[f.key.env] = f.Name
+	}
+	for _, f := range fields {
+		base, ok := strings.CutSuffix(f.key.env, "_FILE")
+		if other, found := vars[base]; ok && found {
+			diags = append(diags, fieldError(f.Field,
+				"%s reads the variable %s, which names the file of the variable %s that %s reads",
+				f.Name, f.key.env, base, other).
+				WithHints(`give one of them another name, with config:"…" or env:"…"`))
 		}
 	}
 	return diags

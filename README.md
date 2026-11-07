@@ -135,7 +135,7 @@ type OAuth struct {
 
 The words of a field are written likewise with `config:"…"`, such as `config:"oauth_token"` for a field `OAuthToken`. A variable a platform names, such as the `PORT` of Cloud Run, is written whole with `env:"…"`, which takes no prefix and changes the variable alone. Words the convention would give anyway may be written too, to keep a name when the Go name changes.
 
-A name of `env:"…"` is read as written, lower case included (`http_proxy`), but for an empty one and one holding `=` or NUL, which no variable has. As in a json tag, the name ends at the first comma: an option after it stops the run, as kanna-config takes none. Two fields of one struct reading one setting stop the run.
+A name of `env:"…"` is read as written, lower case included (`http_proxy`), but for an empty one and one holding `=` or NUL, which no variable has. As in a json tag, the name ends at the first comma: an option after it stops the run, as kanna-config takes none. Two fields of one struct reading one setting stop the run, as does a field whose variable names the file of another's, such as `PasswordFile` beside `Password`.
 
 ## Sources
 
@@ -161,6 +161,8 @@ api:
 
 A value in a file is read as its text, as a variable is: `20` and `"20"` read the same. A section or a list where a value goes is an error. A null is unset.
 
+A file that does not decode is reported by where it is wrong, such as `read config/production.yaml: line 2, column 13 is not valid YAML`, and not by what the library decoding it says, which may quote a secret written there. A `Decode` of your own should say no more either: `source.Open` returns its error as it is.
+
 ## Fields not read
 
 Each field of the struct is read. An unexported field, an embedded one, and one named `_` cannot be, and stop the run. Tag a field the settings do not give `config:"-"`, such as a password the program reads from a secret manager after `LoadX`:
@@ -185,7 +187,7 @@ type Database struct {
 }
 ```
 
-The default of a string, a bool, a number, a `time.Duration`, or an enum of kanna-value is read on generating, and written as a Go value: `x.PoolMaxConns = 10`, `x.DialTimeout = 5 * time.Second`, a constant of the enum. One that does not read stops the run. It is checked then by the rules that tell by the value alone, run no code of the program, and need no other field: `required`, the lengths, the comparisons, `oneof`, and `pattern`. A default one of them rejects stops the run, as it would fail every start without the setting. `rule=Type`, `eqfield`, `email`, `url`, `uuid`, and the hook are checked on reading. The default of a value type of kanna-value or of a type with `UnmarshalText` is read when the setting is given nowhere, as a setting is.
+The default of a string, a bool, a number, a `time.Duration`, or an enum of kanna-value is read on generating, and written as a Go value: `x.PoolMaxConns = 10`, `x.DialTimeout = 5 * time.Second`, a constant of the enum, or `math.NaN()` and `math.Inf(1)` for `NaN` and `+Inf`, which no constant holds and whose rules are checked on reading. One that does not read stops the run. It is checked then by the rules that tell by the value alone, run no code of the program, and need no other field: `required`, the lengths, the comparisons, `oneof`, and `pattern`. A default one of them rejects stops the run, as it would fail every start without the setting. `rule=Type`, `eqfield`, `email`, `url`, `uuid`, and the hook are checked on reading. The default of a value type of kanna-value or of a type with `UnmarshalText` is read when the setting is given nowhere, as a setting is.
 
 ## Types it reads
 

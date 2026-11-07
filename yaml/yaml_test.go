@@ -2,7 +2,6 @@ package yaml_test
 
 import (
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -46,11 +45,24 @@ func TestDecode_Empty(t *testing.T) {
 	}
 }
 
+// An error says where the document is wrong, never what it holds there, which
+// may be a secret.
 func TestDecode_Error(t *testing.T) {
 	t.Parallel()
 
-	_, err := yaml.Decode([]byte("- a list\n- not a mapping\n"))
-	if err == nil || !strings.Contains(err.Error(), "decode YAML") {
-		t.Errorf("Decode error = %v", err)
+	for _, tt := range []struct {
+		name, data, want string
+	}{
+		{"a list", "- a list\n- not a mapping\n", "line 1, column 1 is not a YAML mapping"},
+		{"a scalar", "s3cr3t\n", "line 1, column 1 is not a YAML mapping"},
+		{"a wrong tag", "db:\n  password: !!int s3cr3t\n", "line 2, column 13 is not valid YAML"},
+		{"a colon", "db:\n  password: s3cr3t: x\n", "line 2 is not valid YAML"},
+		{"an open quote", "db:\n  password: \"s3cr3t\n", "line 2 is not valid YAML"},
+		{"a key twice", "db:\n  password: s3cr3t\n  password: s3cr3t\n", "line 3 is not valid YAML"},
+	} {
+		_, err := yaml.Decode([]byte(tt.data))
+		if err == nil || err.Error() != tt.want {
+			t.Errorf("%s: Decode error = %v, want %q", tt.name, err, tt.want)
+		}
 	}
 }

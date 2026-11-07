@@ -3,6 +3,7 @@ package gen
 import (
 	"fmt"
 	"go/types"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -267,6 +268,12 @@ func (l *loader) defaultExpr(fd field) string {
 		return c.Name()
 	case fd.read.kind == readDuration:
 		return durationExpr(fd.def.dur, l.f.Import("time", "time"))
+	case fd.def.mathCall != "":
+		v := l.f.Import("math", "math") + "." + fd.def.mathCall
+		if l.is(fd.read.typ, types.Float64) {
+			return v
+		}
+		return l.convert(fd.read.typ, v)
 	}
 	return fd.def.lit
 }
@@ -302,7 +309,7 @@ func (l *loader) hook() {
 	rt := l.w.Runtime()
 	l.printf("\nvar %s %s.Errors\n%s.validate(&%s)\n", hook, rt, l.x, hook)
 	l.printf("for _, %s := range %s {\nfor _, %s := range []struct{ path, name string }{\n", fe, hook, p)
-	for _, fd := range l.t.fields {
+	for _, fd := range longestFirst(l.t.fields) {
 		l.printf("{%q, %s},\n", fd.path, l.names[fd.Name])
 	}
 	l.printf("} {\n")
@@ -310,4 +317,27 @@ func (l *loader) hook() {
 		rest, ok, l.f.Import("strings", "strings"), fe, p, ok, rest, rest, rest)
 	l.printf("%s.Field = %s.name + %s\nbreak\n}\n}\n", fe, p, rest)
 	l.printf("%s = append(%s, %s)\n}\n", l.errs, l.errs, fe)
+}
+
+// longestFirst returns fields in their order, but each ahead of those whose
+// path its own begins with, such as json:"a.b" ahead of json:"a": the hook's
+// errors go under the first path they begin with.
+func longestFirst(fields []field) []field {
+	var ordered []field
+	for _, fd := range fields {
+		i := slices.IndexFunc(ordered, func(o field) bool { return under(fd.path, o.path) })
+		if i < 0 {
+			ordered = append(ordered, fd)
+		} else {
+			ordered = slices.Insert(ordered, i, fd)
+		}
+	}
+	return ordered
+}
+
+// under reports whether path names something under parent, as the hook's
+// error paths do: parent followed by a field or an index.
+func under(path, parent string) bool {
+	rest, ok := strings.CutPrefix(path, parent)
+	return ok && rest != "" && (rest[0] == '.' || rest[0] == '[')
 }
