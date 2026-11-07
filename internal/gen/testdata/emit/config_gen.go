@@ -335,3 +335,59 @@ func LoadAPI(src source.Source) (API, error) {
 	}
 	return x, nil
 }
+
+// DefinePathsFlags defines on fs the flags that LoadPaths reads Paths from.
+func DefinePathsFlags(fs *flag.FlagSet) {
+	source.DefineFlag(fs, "paths-host", "Paths.Host (PATHS_HOST)", "", false)
+	source.DefineFlag(fs, "paths-host-name", "Paths.HostName (PATHS_HOST_NAME)", "", false)
+}
+
+// LoadPaths reads Paths from src, and checks it by its validate tags.
+// It returns the validate.Errors of each setting it cannot read, or else of
+// each rule the settings break, under the name each goes by where it is set.
+func LoadPaths(src source.Source) (Paths, error) {
+	var (
+		x    Paths
+		errs validate.Errors
+	)
+
+	nameHost := "PATHS_HOST"
+	if v, ok, err := src.Lookup(source.Key{Env: "PATHS_HOST", File: []string{"paths", "host"}, Flag: "paths-host"}); err != nil {
+		errs.Add(v.Name, err)
+	} else if ok {
+		nameHost = v.Name
+		x.Host = v.Text
+	}
+
+	nameHostName := "PATHS_HOST_NAME"
+	if v, ok, err := src.Lookup(source.Key{Env: "PATHS_HOST_NAME", File: []string{"paths", "host_name"}, Flag: "paths-host-name"}); err != nil {
+		errs.Add(v.Name, err)
+	} else if ok {
+		nameHostName = v.Name
+		x.HostName = v.Text
+	}
+
+	if len(errs) > 0 {
+		return Paths{}, errs
+	}
+
+	var hook validate.Errors
+	x.validate(&hook)
+	for _, fe := range hook {
+		for _, p := range []struct{ path, name string }{
+			{"host.name", nameHostName},
+			{"host", nameHost},
+		} {
+			if rest, ok := strings.CutPrefix(fe.Field, p.path); ok && (rest == "" || rest[0] == '.' || rest[0] == '[') {
+				fe.Field = p.name + rest
+				break
+			}
+		}
+		errs = append(errs, fe)
+	}
+
+	if len(errs) > 0 {
+		return Paths{}, errs
+	}
+	return x, nil
+}

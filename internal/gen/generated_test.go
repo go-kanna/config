@@ -24,7 +24,7 @@ func clearEnv(t *testing.T) {
 		"DATABASE_ADMIN_URL", "DATABASE_WRITER_URL", "DATABASE_POOL_MAX_CONNS", "DATABASE_DIAL_TIMEOUT",
 		"DATABASE_RATIO", "DATABASE_DEBUG", "DATABASE_RETRIES", "OAUTH_CLIENT_ID", "OAUTH_CLIENT_ID_FILE",
 		"OAUTH_TOKEN", "PORT", "API_MODE", "API_ADMIN", "API_PUBLIC", "API_LEVEL", "API_LISTEN", "API_NAME",
-		"API_ALIAS",
+		"API_ALIAS", "PATHS_HOST", "PATHS_HOST_NAME",
 	} {
 		t.Setenv(name, "")
 	}
@@ -233,5 +233,17 @@ func TestGenerated_Hook(t *testing.T) {
 	want := "validate: PORT: greater_than_or_equal_to (count=1); API_ALIAS: same_as_name"
 	if got := errString(err); got != want {
 		t.Errorf("LoadAPI error = %q, want %q", got, want)
+	}
+}
+
+// What the hook reports goes under the field whose JSON name is the longest
+// the path begins with, not under the first declared.
+func TestGenerated_HookLongestPath(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("PATHS_HOST_NAME", "-")
+
+	_, err := emit.LoadPaths(source.Env())
+	if got, want := errString(err), "validate: PATHS_HOST_NAME: dash"; got != want {
+		t.Errorf("LoadPaths error = %q, want %q", got, want)
 	}
 }

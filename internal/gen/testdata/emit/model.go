@@ -91,3 +91,17 @@ func (a API) validate(errs *validate.Errors) {
 		errs.Add("Alias", validate.Fail("same_as_name"))
 	}
 }
+
+// Paths names a field by a JSON name that another's begins with.
+//
+//kanna:config
+type Paths struct {
+	Host     string `json:"host"`
+	HostName string `json:"host.name"`
+}
+
+func (p Paths) validate(errs *validate.Errors) {
+	if p.HostName == "-" {
+		errs.Add("host.name", validate.Fail("dash"))
+	}
+}
