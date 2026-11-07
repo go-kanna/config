@@ -1,9 +1,11 @@
 # config
 
 [![CI](https://github.com/go-kanna/config/actions/workflows/ci.yaml/badge.svg)](https://github.com/go-kanna/config/actions/workflows/ci.yaml)
+[![codecov](https://codecov.io/gh/go-kanna/config/graph/badge.svg)](https://codecov.io/gh/go-kanna/config)
 [![Go Reference](https://pkg.go.dev/badge/github.com/go-kanna/config.svg)](https://pkg.go.dev/github.com/go-kanna/config)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![日本語](https://img.shields.io/badge/lang-日本語-blue.svg)](README.ja.md)
+[![Release](https://img.shields.io/github/v/tag/go-kanna/config?label=release&sort=semver&filter=v*)](https://github.com/go-kanna/config/tags)
+[![日本語](https://img.shields.io/badge/lang-%E6%97%A5%E6%9C%AC%E8%AA%9E-blue.svg)](README.ja.md)
 
 kanna-config generates, for a struct of settings, the function that reads it from flags, the environment, and files, and checks it by the `validate` tags of [kanna-validate](https://github.com/go-kanna/validate). The name of each setting follows from the names of the struct and the field. What it generates is plain Go that reads each setting with `strconv` and checks each rule, with no reflection, and an error names the setting as it is set: the variable, the key in the file, or the flag.
 
