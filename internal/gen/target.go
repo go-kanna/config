@@ -357,10 +357,12 @@ func bitsOr(bits int) int {
 	return bits
 }
 
-// collisions reports two fields of a struct read from one setting.
+// collisions reports two fields of a struct read from one setting, and a field
+// whose variable is the one naming the file of another's, NAME_FILE.
 func collisions(fields []field) []diag.Diag {
 	var diags []diag.Diag
 	seen := map[string]string{}
+	vars := map[string]string{}
 	for _, f := range fields {
 		for _, name := range []string{
 			"variable " + f.key.env, "key " + strings.Join(f.key.file, "."), "flag -" + f.key.flag,
@@ -370,6 +372,16 @@ func collisions(fields []field) []diag.Diag {
 				continue
 			}
 			seen[name] = f.Name
+		}
+		vars[f.key.env] = f.Name
+	}
+	for _, f := range fields {
+		base, ok := strings.CutSuffix(f.key.env, "_FILE")
+		if other, found := vars[base]; ok && found {
+			diags = append(diags, fieldError(f.Field,
+				"%s reads the variable %s, which names the file of the variable %s that %s reads",
+				f.Name, f.key.env, base, other).
+				WithHints(`give one of them another name, with config:"…" or env:"…"`))
 		}
 	}
 	return diags

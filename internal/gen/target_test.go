@@ -106,6 +106,17 @@ func TestTargets_Diagnostics(t *testing.T) {
 			want: "B reads the variable SHARED that A reads too (field B)",
 		},
 		{
+			name: "a variable naming the file of another", fields: "Password string\n\tPasswordFile string",
+			want: "PasswordFile reads the variable SETTINGS_PASSWORD_FILE, which names the file of " +
+				"the variable SETTINGS_PASSWORD that Password reads (field PasswordFile)",
+		},
+		{
+			name:   "a variable naming the file of a later one",
+			fields: "KeyFile string `env:\"KEY_FILE\"`\n\tKey string `env:\"KEY\"`",
+			want: "KeyFile reads the variable KEY_FILE, which names the file of " +
+				"the variable KEY that Key reads (field KeyFile)",
+		},
+		{
 			name: "a rule that does not apply", fields: "Port int `validate:\"max=5\"`",
 			want: `rule "max" cannot apply to int (field Port)`,
 		},
