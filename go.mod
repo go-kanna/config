@@ -5,8 +5,8 @@ go 1.27.0
 toolchain go1.27.3
 
 require (
-	github.com/go-kanna/internal v0.0.30
-	github.com/go-kanna/validator v0.0.27-0.20261108222711-671f7e24b841
+	github.com/go-kanna/internal v0.0.31
+	github.com/go-kanna/validator v0.0.27
 )
 
 require (

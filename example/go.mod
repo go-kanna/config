@@ -10,12 +10,12 @@ require (
 	github.com/go-kanna/config v0.0.3
 	github.com/go-kanna/config/toml v0.0.2
 	github.com/go-kanna/config/yaml v0.0.2
-	github.com/go-kanna/validator v0.0.27-0.20261108222711-671f7e24b841
+	github.com/go-kanna/validator v0.0.27
 )
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
-	github.com/go-kanna/internal v0.0.30 // indirect
+	github.com/go-kanna/internal v0.0.31 // indirect
 	github.com/go-kanna/validate v0.0.25 // indirect
 	go.yaml.in/yaml/v3 v3.0.6 // indirect
 	golang.org/x/mod v0.42.0 // indirect
