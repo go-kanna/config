@@ -303,7 +303,7 @@ func durationExpr(d time.Duration, timePkg string) string {
 
 // hook writes the call of the hook of the struct, and moves what it reports
 // under the name of each field's setting: the hook names a field as
-// kanna-validate does, by its JSON name.
+// kanna-validator does, by its JSON name.
 func (l *loader) hook() {
 	hook, fe, p, rest, ok := l.locals["hook"], l.locals["fe"], l.locals["p"], l.locals["rest"], l.locals["ok"]
 	rt := l.w.Runtime()

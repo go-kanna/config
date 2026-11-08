@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-kanna/validate"
+	"github.com/go-kanna/validator"
 
 	"github.com/go-kanna/config/source"
 )
@@ -317,12 +317,12 @@ func TestScalars(t *testing.T) {
 func TestCoded(t *testing.T) {
 	t.Parallel()
 
-	inclusion := validate.Inclusion()
+	inclusion := validator.Inclusion()
 	if got := source.Coded(inclusion, "model.Priority"); !errors.Is(got, inclusion) {
 		t.Errorf("Coded(inclusion) = %v, want it as it is", got)
 	}
 	got := source.Coded(errors.New(`slog: level string "x": unknown name`), "slog.Level")
-	coded, ok := errors.AsType[validate.Coded](got)
+	coded, ok := errors.AsType[validator.Coded](got)
 	if !ok || coded.Code() != "invalid" || coded.Params()["type"] != "slog.Level" || strings.Contains(got.Error(), `"x"`) {
 		t.Errorf("Coded(plain) = %q, want invalid naming the type, not the value", got.Error())
 	}

@@ -85,7 +85,7 @@ func TestGenerated_Unreadable(t *testing.T) {
 	t.Setenv("DATABASE_RETRIES", "300")
 
 	_, err := emit.LoadDatabase(source.Env())
-	want := "validate: DATABASE_POOL_MAX_CONNS: invalid (type=int32); DATABASE_RETRIES: invalid (type=uint8)"
+	want := "validator: DATABASE_POOL_MAX_CONNS: invalid (type=int32); DATABASE_RETRIES: invalid (type=uint8)"
 	if got := errString(err); got != want {
 		t.Errorf("LoadDatabase error = %q, want %q", got, want)
 	}
@@ -96,7 +96,7 @@ func TestGenerated_Rules(t *testing.T) {
 	t.Setenv("DATABASE_POOL_MAX_CONNS", "0")
 
 	_, err := emit.LoadDatabase(source.Env())
-	want := "validate: DATABASE_WRITER_URL: blank; DATABASE_POOL_MAX_CONNS: greater_than_or_equal_to (count=1)"
+	want := "validator: DATABASE_WRITER_URL: blank; DATABASE_POOL_MAX_CONNS: greater_than_or_equal_to (count=1)"
 	if got := errString(err); got != want {
 		t.Errorf("LoadDatabase error = %q, want %q", got, want)
 	}
@@ -124,7 +124,7 @@ func TestGenerated_Sources(t *testing.T) {
 	}
 
 	_, err = emit.LoadDatabase(src)
-	if got, want := errString(err), "validate: database.pool_max_conns: greater_than_or_equal_to (count=1)"; got != want {
+	if got, want := errString(err), "validator: database.pool_max_conns: greater_than_or_equal_to (count=1)"; got != want {
 		t.Errorf("LoadDatabase error = %q, want %q", got, want)
 	}
 
@@ -164,7 +164,7 @@ func TestGenerated_SecretFile(t *testing.T) {
 
 	t.Setenv("OAUTH_CLIENT_ID", "app-2")
 	_, err = emit.LoadOAuth(source.Env())
-	want := "validate: OAUTH_CLIENT_ID: both OAUTH_CLIENT_ID and OAUTH_CLIENT_ID_FILE are set; set one of them"
+	want := "validator: OAUTH_CLIENT_ID: both OAUTH_CLIENT_ID and OAUTH_CLIENT_ID_FILE are set; set one of them"
 	if got := errString(err); got != want {
 		t.Errorf("LoadOAuth error = %q, want %q", got, want)
 	}
@@ -206,7 +206,7 @@ func TestGenerated_Rejected(t *testing.T) {
 	}
 
 	_, err := emit.LoadAPI(source.Env())
-	want := "validate: API_MODE: inclusion; API_ADMIN: email; API_PUBLIC: port; " +
+	want := "validator: API_MODE: inclusion; API_ADMIN: email; API_PUBLIC: port; " +
 		"API_LEVEL: invalid (type=slog.Level); API_LISTEN: invalid (type=netip.Addr)"
 	if got := errString(err); got != want {
 		t.Errorf("LoadAPI error = %q, want %q", got, want)
@@ -218,7 +218,7 @@ func TestGenerated_Rejected(t *testing.T) {
 	t.Setenv("API_LEVEL", "")
 	t.Setenv("API_LISTEN", "")
 	_, err = emit.LoadAPI(source.Env())
-	if got, want := errString(err), "validate: API_PUBLIC: invalid (type=Port)"; got != want {
+	if got, want := errString(err), "validator: API_PUBLIC: invalid (type=Port)"; got != want {
 		t.Errorf("LoadAPI error = %q, want %q", got, want)
 	}
 }
@@ -231,7 +231,7 @@ func TestGenerated_Hook(t *testing.T) {
 	t.Setenv("API_ALIAS", "app")
 
 	_, err := emit.LoadAPI(source.Env())
-	want := "validate: PORT: greater_than_or_equal_to (count=1); API_ALIAS: same_as_name"
+	want := "validator: PORT: greater_than_or_equal_to (count=1); API_ALIAS: same_as_name"
 	if got := errString(err); got != want {
 		t.Errorf("LoadAPI error = %q, want %q", got, want)
 	}
@@ -244,7 +244,7 @@ func TestGenerated_HookLongestPath(t *testing.T) {
 	t.Setenv("PATHS_HOST_NAME", "-")
 
 	_, err := emit.LoadPaths(source.Env())
-	if got, want := errString(err), "validate: PATHS_HOST_NAME: dash"; got != want {
+	if got, want := errString(err), "validator: PATHS_HOST_NAME: dash"; got != want {
 		t.Errorf("LoadPaths error = %q, want %q", got, want)
 	}
 }

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/go-kanna/config/source"
-	"github.com/go-kanna/validate"
+	"github.com/go-kanna/validator"
 )
 
 // DefineServerFlags defines on fs the flags that LoadServer reads Server from.
@@ -20,12 +20,12 @@ func DefineServerFlags(fs *flag.FlagSet) {
 }
 
 // LoadServer reads Server from src, and checks it by its validate tags.
-// It returns the validate.Errors of each setting it cannot read, or else of
+// It returns the validator.Errors of each setting it cannot read, or else of
 // each rule the settings break, under the name each goes by where it is set.
 func LoadServer(src source.Source) (Server, error) {
 	var (
 		x    Server
-		errs validate.Errors
+		errs validator.Errors
 	)
 
 	x.Port = 8080
@@ -35,7 +35,7 @@ func LoadServer(src source.Source) (Server, error) {
 	} else if ok {
 		namePort = v.Name
 		if n, err := strconv.ParseInt(v.Text, 10, 0); err != nil {
-			errs.Add(namePort, validate.FailWith("invalid", map[string]any{"type": "int"}))
+			errs.Add(namePort, validator.FailWith("invalid", map[string]any{"type": "int"}))
 		} else {
 			x.Port = int(n)
 		}
@@ -48,7 +48,7 @@ func LoadServer(src source.Source) (Server, error) {
 	} else if ok {
 		nameTimeout = v.Name
 		if d, err := time.ParseDuration(v.Text); err != nil {
-			errs.Add(nameTimeout, validate.FailWith("invalid", map[string]any{"type": "time.Duration"}))
+			errs.Add(nameTimeout, validator.FailWith("invalid", map[string]any{"type": "time.Duration"}))
 		} else {
 			x.Timeout = d
 		}
@@ -79,10 +79,10 @@ func LoadServer(src source.Source) (Server, error) {
 	}
 
 	if x.Port < 1 {
-		errs.Add(namePort, validate.GreaterThanOrEqualTo(1))
+		errs.Add(namePort, validator.GreaterThanOrEqualTo(1))
 	}
 	if x.Port > 65535 {
-		errs.Add(namePort, validate.LessThanOrEqualTo(65535))
+		errs.Add(namePort, validator.LessThanOrEqualTo(65535))
 	}
 
 	if len(errs) > 0 {
@@ -98,12 +98,12 @@ func DefineDatabaseFlags(fs *flag.FlagSet) {
 }
 
 // LoadDatabase reads Database from src, and checks it by its validate tags.
-// It returns the validate.Errors of each setting it cannot read, or else of
+// It returns the validator.Errors of each setting it cannot read, or else of
 // each rule the settings break, under the name each goes by where it is set.
 func LoadDatabase(src source.Source) (Database, error) {
 	var (
 		x    Database
-		errs validate.Errors
+		errs validator.Errors
 	)
 
 	nameWriterURL := "DATABASE_WRITER_URL"
@@ -121,7 +121,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 	} else if ok {
 		namePoolMaxConns = v.Name
 		if n, err := strconv.ParseInt(v.Text, 10, 32); err != nil {
-			errs.Add(namePoolMaxConns, validate.FailWith("invalid", map[string]any{"type": "int32"}))
+			errs.Add(namePoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
@@ -132,11 +132,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	}
 
 	if x.WriterURL == "" {
-		errs.Add(nameWriterURL, validate.Blank())
+		errs.Add(nameWriterURL, validator.Blank())
 	}
 
 	if x.PoolMaxConns < 1 {
-		errs.Add(namePoolMaxConns, validate.GreaterThanOrEqualTo[int32](1))
+		errs.Add(namePoolMaxConns, validator.GreaterThanOrEqualTo[int32](1))
 	}
 
 	if len(errs) > 0 {
