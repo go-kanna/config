@@ -7,18 +7,18 @@
 [![Release](https://img.shields.io/github/v/tag/go-kanna/config?label=release&sort=semver&filter=v*)](https://github.com/go-kanna/config/tags)
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README.md)
 
-kanna-config は、設定の構造体を、フラグ、環境変数、ファイルから読み、[kanna-validate](https://github.com/go-kanna/validate) の `validate` タグで確かめる関数を生成します。各設定の名前は、構造体とフィールドの名前で決まります。生成されるのは、各設定を `strconv` で読み、各ルールを確かめる素の Go で、リフレクションは使いません。誤りは、設定した場所での名前（環境変数、ファイルのキー、フラグ）で報告します。
+kanna-config は、設定の構造体を、フラグ、環境変数、ファイルから読み、[kanna-validator](https://github.com/go-kanna/validator) の `validate` タグで確かめる関数を生成します。各設定の名前は、構造体とフィールドの名前で決まります。生成されるのは、各設定を `strconv` で読み、各ルールを確かめる素の Go で、リフレクションは使いません。誤りは、設定した場所での名前（環境変数、ファイルのキー、フラグ）で報告します。
 
-[kanna](https://go-kanna.github.io/ja/) コードジェネレータファミリーの 1 つです。go-kanna/validate のランタイムと同じく、Go 1.27 以上が必要です。
+[kanna](https://go-kanna.github.io/ja/) コードジェネレータファミリーの 1 つです。go-kanna/validator のランタイムと同じく、Go 1.27 以上が必要です。
 
 ## インストール
 
 ```sh
 go get -tool github.com/go-kanna/config/cmd/kanna-config
-go get github.com/go-kanna/config github.com/go-kanna/validate
+go get github.com/go-kanna/config github.com/go-kanna/validator
 ```
 
-生成コードが import するのは、このモジュールの [`source`](source) パッケージ、go-kanna/validate のランタイム、読む [kanna-value](https://github.com/go-kanna/value) の型のコンストラクタです。YAML と TOML のファイルは、それぞれ別のモジュールが読みます。それを読むプログラムだけが require します:
+生成コードが import するのは、このモジュールの [`source`](source) パッケージ、go-kanna/validator のランタイム、読む [kanna-value](https://github.com/go-kanna/value) の型のコンストラクタです。YAML と TOML のファイルは、それぞれ別のモジュールが読みます。それを読むプログラムだけが require します:
 
 ```sh
 go get github.com/go-kanna/config/yaml   # or github.com/go-kanna/config/toml
@@ -50,7 +50,7 @@ type Database struct {
 func LoadDatabase(src source.Source) (Database, error) {
 	var (
 		x    Database
-		errs validate.Errors
+		errs validator.Errors
 	)
 
 	// ...
@@ -62,7 +62,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 	} else if ok {
 		namePoolMaxConns = v.Name
 		if n, err := strconv.ParseInt(v.Text, 10, 32); err != nil {
-			errs.Add(namePoolMaxConns, validate.FailWith("invalid", map[string]any{"type": "int32"}))
+			errs.Add(namePoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
@@ -75,11 +75,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	}
 
 	if x.WriterURL == "" {
-		errs.Add(nameWriterURL, validate.Blank())
+		errs.Add(nameWriterURL, validator.Blank())
 	}
 
 	if x.PoolMaxConns < 1 {
-		errs.Add(namePoolMaxConns, validate.GreaterThanOrEqualTo[int32](1))
+		errs.Add(namePoolMaxConns, validator.GreaterThanOrEqualTo[int32](1))
 	}
 
 	if len(errs) > 0 {
@@ -109,7 +109,7 @@ db, err := config.LoadDatabase(src)
 `DATABASE_WRITER_URL` を設定し忘れ、ファイルに `pool_max_conns: 0` と書いて起動すると、`LoadDatabase` は、それぞれを設定した名前で誤りを返します:
 
 ```text
-validate: DATABASE_WRITER_URL: blank; database.pool_max_conns: greater_than_or_equal_to (count=1)
+validator: DATABASE_WRITER_URL: blank; database.pool_max_conns: greater_than_or_equal_to (count=1)
 ```
 
 ## 名前
@@ -210,7 +210,7 @@ type Database struct {
 
 ## 検証
 
-`validate` タグは kanna-validate と同じ意味で、`LoadX` が確かめます。`//kanna:validate` は要りません。構造体の `validate(errs *validate.Errors)` メソッド（kanna-validate のフック）は、タグのあとで呼びます。
+`validate` タグは kanna-validator と同じ意味で、`LoadX` が確かめます。`//kanna:validate` は要りません。構造体の `validate(errs *validator.Errors)` メソッド（kanna-validator のフック）は、タグのあとで呼びます。
 
 `LoadX` は 2 段階で誤りを返します:
 
@@ -219,11 +219,11 @@ type Database struct {
 
 読めなかった設定のフィールドは、読んだ値を持ちません。そのままルールを確かめると、フィールドをまたぐルールやフックが、欠けた値を見て誤りを報告しかねないからです。
 
-誤りは、その設定をした場所での名前の下に置きます。環境変数、`database.pool_max_conns`、`-database-pool-max-conns` のいずれかで、どこにも設定されていなければ環境変数の名前です。フィールドの型自身の `Validate` が返す誤りは、その名前の下に残ります（`DATABASE_PRIMARY.host`）。フックは kanna-validate と同じく、フィールドを JSON の名前（なければ Go の名前）で名指し、そのパスは生成時に照らします。kanna-config は、フックが返した誤りを、フィールドの設定の名前の下に移し、その先は残します。構造体全体の誤りは `base` のままです。
+誤りは、その設定をした場所での名前の下に置きます。環境変数、`database.pool_max_conns`、`-database-pool-max-conns` のいずれかで、どこにも設定されていなければ環境変数の名前です。フィールドの型自身の `Validate` が返す誤りは、その名前の下に残ります（`DATABASE_PRIMARY.host`）。フックは kanna-validator と同じく、フィールドを JSON の名前（なければ Go の名前）で名指し、そのパスは生成時に照らします。kanna-config は、フックが返した誤りを、フィールドの設定の名前の下に移し、その先は残します。構造体全体の誤りは `base` のままです。
 
-コード付きにするのは、読むときの誤りだけです。ルールは、kanna-validate と同じく返したものを返します。同じルールが `LoadX` と `Validate` で同じ誤りを返すようにするためです。誤りに値を含めないのは、ルールを書いた人の責任です。kanna-value の `rule.Fail` と `validate.Fail` は値を含めません。
+コード付きにするのは、読むときの誤りだけです。ルールは、kanna-validator と同じく返したものを返します。同じルールが `LoadX` と `Validate` で同じ誤りを返すようにするためです。誤りに値を含めないのは、ルールを書いた人の責任です。kanna-value の `rule.Fail` と `validator.Fail` は値を含めません。
 
-`required` は kanna-validate と同じく値のルールです。ゼロ値を拒否し、明示した `0` や `false` も拒否します。ゼロでない既定値があれば、どこにも設定されていなくても通ります。変数が設定されているかを確かめる書き方はありません。文字列の既定値なら、`LoadX` では `required` は必ず満たされますが、`//kanna:validate` も付けた構造体の `Validate` では、手で組み立てた値にも効きます。
+`required` は kanna-validator と同じく値のルールです。ゼロ値を拒否し、明示した `0` や `false` も拒否します。ゼロでない既定値があれば、どこにも設定されていなくても通ります。変数が設定されているかを確かめる書き方はありません。文字列の既定値なら、`LoadX` では `required` は必ず満たされますが、`//kanna:validate` も付けた構造体の `Validate` では、手で組み立てた値にも効きます。
 
 `LoadX` のために `Validate` は生成しません。ほかで呼びたいときは、`//kanna:validate` も付けます。そのときも `LoadX` は自分でルールを確かめるので、付けても `LoadX` は変わりません。
 
@@ -232,7 +232,7 @@ type Database struct {
 `//kanna:config` を付けた構造体 `X` ごとに、`config_gen.go` に次の 2 つを書きます:
 
 - `DefineXFlags(fs *flag.FlagSet)`: `X` のフラグを、`LoadX` が読む名前と既定値で定義します。
-- `LoadX(src source.Source) (X, error)`: `X` を読んで確かめます。エラーは、あれば `validate.Errors` です。
+- `LoadX(src source.Source) (X, error)`: `X` を読んで確かめます。エラーは、あれば `validator.Errors` です。
 
 同じ名前の関数を手で書いていると、生成を止めます。kanna-di は、`X` のパッケージにある `LoadX` を、`source.Source` から `X` を作るものとして見つけます。
 

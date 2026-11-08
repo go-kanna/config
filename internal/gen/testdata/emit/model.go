@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-kanna/validate"
+	"github.com/go-kanna/validator"
 )
 
 // Mode is an enum as kanna-value generates one, down to what kanna-config
@@ -26,7 +26,7 @@ func NewMode(v string) (Mode, error) {
 	case ModeFast, ModeSlow:
 		return m, nil
 	}
-	return "", validate.Inclusion()
+	return "", validator.Inclusion()
 }
 
 // Email is a value type as kanna-value generates one, holding a string.
@@ -36,7 +36,7 @@ func (e Email) String() string { return e.s }
 
 func NewEmail(s string) (Email, error) {
 	if !strings.Contains(s, "@") {
-		return Email{}, validate.Fail("email")
+		return Email{}, validator.Fail("email")
 	}
 	return Email{s: s}, nil
 }
@@ -48,7 +48,7 @@ func (p Port) Int() int { return p.i }
 
 func NewPort(i int) (Port, error) {
 	if i < 1 || i > 65535 {
-		return Port{}, validate.Fail("port")
+		return Port{}, validator.Fail("port")
 	}
 	return Port{i: i}, nil
 }
@@ -86,9 +86,9 @@ type API struct {
 	Alias  string
 }
 
-func (a API) validate(errs *validate.Errors) {
+func (a API) validate(errs *validator.Errors) {
 	if a.Alias != "" && a.Alias == a.Name {
-		errs.Add("Alias", validate.Fail("same_as_name"))
+		errs.Add("Alias", validator.Fail("same_as_name"))
 	}
 }
 
@@ -100,9 +100,9 @@ type Paths struct {
 	HostName string `json:"host.name"`
 }
 
-func (p Paths) validate(errs *validate.Errors) {
+func (p Paths) validate(errs *validator.Errors) {
 	if p.HostName == "-" {
-		errs.Add("host.name", validate.Fail("dash"))
+		errs.Add("host.name", validator.Fail("dash"))
 	}
 }
 

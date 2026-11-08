@@ -7,18 +7,18 @@
 [![Release](https://img.shields.io/github/v/tag/go-kanna/config?label=release&sort=semver&filter=v*)](https://github.com/go-kanna/config/tags)
 [![日本語](https://img.shields.io/badge/lang-%E6%97%A5%E6%9C%AC%E8%AA%9E-blue.svg)](README.ja.md)
 
-kanna-config generates, for a struct of settings, the function that reads it from flags, the environment, and files, and checks it by the `validate` tags of [kanna-validate](https://github.com/go-kanna/validate). The name of each setting follows from the names of the struct and the field. What it generates is plain Go that reads each setting with `strconv` and checks each rule, with no reflection, and an error names the setting as it is set: the variable, the key in the file, or the flag.
+kanna-config generates, for a struct of settings, the function that reads it from flags, the environment, and files, and checks it by the `validate` tags of [kanna-validator](https://github.com/go-kanna/validator). The name of each setting follows from the names of the struct and the field. What it generates is plain Go that reads each setting with `strconv` and checks each rule, with no reflection, and an error names the setting as it is set: the variable, the key in the file, or the flag.
 
-It is one of the [kanna](https://go-kanna.github.io/) family of code generators. It needs Go 1.27 or later, as the runtime of go-kanna/validate does.
+It is one of the [kanna](https://go-kanna.github.io/) family of code generators. It needs Go 1.27 or later, as the runtime of go-kanna/validator does.
 
 ## Install
 
 ```sh
 go get -tool github.com/go-kanna/config/cmd/kanna-config
-go get github.com/go-kanna/config github.com/go-kanna/validate
+go get github.com/go-kanna/config github.com/go-kanna/validator
 ```
 
-The generated code imports package [`source`](source) of this module, the runtime of go-kanna/validate, and the constructors of the types of [kanna-value](https://github.com/go-kanna/value) it reads. A YAML or a TOML file is read by a module of its own, which only a program reading one requires:
+The generated code imports package [`source`](source) of this module, the runtime of go-kanna/validator, and the constructors of the types of [kanna-value](https://github.com/go-kanna/value) it reads. A YAML or a TOML file is read by a module of its own, which only a program reading one requires:
 
 ```sh
 go get github.com/go-kanna/config/yaml   # or github.com/go-kanna/config/toml
@@ -50,7 +50,7 @@ type Database struct {
 func LoadDatabase(src source.Source) (Database, error) {
 	var (
 		x    Database
-		errs validate.Errors
+		errs validator.Errors
 	)
 
 	// ...
@@ -62,7 +62,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 	} else if ok {
 		namePoolMaxConns = v.Name
 		if n, err := strconv.ParseInt(v.Text, 10, 32); err != nil {
-			errs.Add(namePoolMaxConns, validate.FailWith("invalid", map[string]any{"type": "int32"}))
+			errs.Add(namePoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
@@ -75,11 +75,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	}
 
 	if x.WriterURL == "" {
-		errs.Add(nameWriterURL, validate.Blank())
+		errs.Add(nameWriterURL, validator.Blank())
 	}
 
 	if x.PoolMaxConns < 1 {
-		errs.Add(namePoolMaxConns, validate.GreaterThanOrEqualTo[int32](1))
+		errs.Add(namePoolMaxConns, validator.GreaterThanOrEqualTo[int32](1))
 	}
 
 	if len(errs) > 0 {
@@ -109,7 +109,7 @@ db, err := config.LoadDatabase(src)
 With `DATABASE_WRITER_URL` unset and `pool_max_conns: 0` in the file, `LoadDatabase` returns the errors under the names the settings are set by:
 
 ```text
-validate: DATABASE_WRITER_URL: blank; database.pool_max_conns: greater_than_or_equal_to (count=1)
+validator: DATABASE_WRITER_URL: blank; database.pool_max_conns: greater_than_or_equal_to (count=1)
 ```
 
 ## Names
@@ -210,7 +210,7 @@ What cannot be read is reported by a code and its params, never by the value, wh
 
 ## Checking
 
-The `validate` tags mean what they mean to kanna-validate, and `LoadX` checks them; the struct needs no `//kanna:validate`. A `validate(errs *validate.Errors)` method of the struct, the hook of kanna-validate, runs after the tags.
+The `validate` tags mean what they mean to kanna-validator, and `LoadX` checks them; the struct needs no `//kanna:validate`. A `validate(errs *validator.Errors)` method of the struct, the hook of kanna-validator, runs after the tags.
 
 `LoadX` returns errors in two steps:
 
@@ -219,11 +219,11 @@ The `validate` tags mean what they mean to kanna-validate, and `LoadX` checks th
 
 A setting that cannot be read leaves its field without the value read, and checking the rules then could report a rule across fields, or the hook, that the value it lacks breaks.
 
-An error goes under the name of the setting where it was set: the variable, `database.pool_max_conns`, or `-database-pool-max-conns`. A setting given nowhere goes under its variable. What a field's own `Validate` reports stays under that name, as `DATABASE_PRIMARY.host`. The hook names a field as kanna-validate does, by its JSON name, or else its Go name, and checks its paths on generating; kanna-config moves what it reports under the name of the field's setting, keeping what follows. An error on the struct as a whole stays under `base`.
+An error goes under the name of the setting where it was set: the variable, `database.pool_max_conns`, or `-database-pool-max-conns`. A setting given nowhere goes under its variable. What a field's own `Validate` reports stays under that name, as `DATABASE_PRIMARY.host`. The hook names a field as kanna-validator does, by its JSON name, or else its Go name, and checks its paths on generating; kanna-config moves what it reports under the name of the field's setting, keeping what follows. An error on the struct as a whole stays under `base`.
 
-Only reading turns an error into a code. The rules return what they return, as in kanna-validate, so that one rule reports the same in `LoadX` and in `Validate`: keeping a value out of an error is up to whoever writes the rule, and `rule.Fail` of kanna-value and `validate.Fail` keep it out.
+Only reading turns an error into a code. The rules return what they return, as in kanna-validator, so that one rule reports the same in `LoadX` and in `Validate`: keeping a value out of an error is up to whoever writes the rule, and `rule.Fail` of kanna-value and `validator.Fail` keep it out.
 
-`required` is a rule of the value, as in kanna-validate: it rejects the zero value, an explicit `0` or `false` included, and lets a setting given nowhere through when its default is not zero. Nothing tells whether a variable is set. With a string default, `required` holds in `LoadX` always, and still checks a value the program makes by hand in the `Validate` of a struct marked `//kanna:validate`.
+`required` is a rule of the value, as in kanna-validator: it rejects the zero value, an explicit `0` or `false` included, and lets a setting given nowhere through when its default is not zero. Nothing tells whether a variable is set. With a string default, `required` holds in `LoadX` always, and still checks a value the program makes by hand in the `Validate` of a struct marked `//kanna:validate`.
 
 No `Validate` is generated for `LoadX`. To call one elsewhere, mark the struct `//kanna:validate` too; `LoadX` still checks the rules itself, so that the mark changes nothing of it.
 
@@ -232,7 +232,7 @@ No `Validate` is generated for `LoadX`. To call one elsewhere, mark the struct `
 For each struct `X` marked `//kanna:config`, `config_gen.go` holds:
 
 - `DefineXFlags(fs *flag.FlagSet)`, which defines the flags of `X`, each named and with its default, as `LoadX` reads them.
-- `LoadX(src source.Source) (X, error)`, which reads `X` and checks it. The error, when there is one, is a `validate.Errors`.
+- `LoadX(src source.Source) (X, error)`, which reads `X` and checks it. The error, when there is one, is a `validator.Errors`.
 
 A function of the same name written by hand stops the run. kanna-di finds `LoadX` in the package of `X` as what provides `X` from a `source.Source`.
 

@@ -61,7 +61,7 @@ type target struct {
 	// fields are the fields read, in declaration order.
 	fields []field
 
-	// hook is the validate(*validate.Errors) method the struct declares, which
+	// hook is the validate(*validator.Errors) method the struct declares, which
 	// the generated code calls once the settings are read, or nil.
 	hook *types.Func
 }

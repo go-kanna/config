@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-kanna/validate"
+	"github.com/go-kanna/validator"
 )
 
 // Key names one setting in each place it may be found.
@@ -242,8 +242,8 @@ func (v *flagValue) IsBoolFlag() bool {
 // text of a setting, when it carries a code, and otherwise invalid naming typ:
 // the text of err may hold the value, which a setting may keep secret.
 func Coded(err error, typ string) error {
-	if _, ok := errors.AsType[validate.Coded](err); ok {
+	if _, ok := errors.AsType[validator.Coded](err); ok {
 		return err
 	}
-	return validate.FailWith("invalid", map[string]any{"type": typ})
+	return validator.FailWith("invalid", map[string]any{"type": typ})
 }
