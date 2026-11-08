@@ -204,7 +204,7 @@ The first of these that fits a field's type reads it:
 | an integer, or a type defined on one | `strconv.ParseInt` or `strconv.ParseUint`, at its size |
 | a float, or a type defined on one | `strconv.ParseFloat`, at its size |
 
-Any other type, such as a pointer, a slice, a map, or a struct, stops the run. A list, such as one separated by commas, is read by a type of its own with `UnmarshalText`; settings that nest are a struct of their own, marked `//kanna:config`.
+Any other type, such as a pointer, a slice, a map, or a struct, stops the run. A list, such as one separated by commas, is read by a type of its own with `UnmarshalText`, and `dive` on its field checks each element, under the name of the setting with the index, as `CORS_ALLOWED_ORIGINS[1]`. Settings that nest are a struct of their own, marked `//kanna:config`.
 
 What cannot be read is reported by a code and its params, never by the value, which a setting may keep secret: a number, a bool, or a duration that does not read is `invalid` with the type, as in `DATABASE_POOL_MAX_CONNS: invalid (type=int32)`. What a constructor or an `UnmarshalText` returns is kept when it has a code, as the rules of kanna-value do, and otherwise is `invalid` with the type: the error of `slog.Level` holds the value. Having a code is no proof of holding no value; what a code and its params say is up to whoever writes the type. The `type` param is there for a log or a structured error, and no promise of a placeholder a translation can show.
 
