@@ -8,8 +8,10 @@
 package yaml
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 
 	"go.yaml.in/yaml/v3"
@@ -19,12 +21,25 @@ import (
 // it says of the line.
 var lineOf = regexp.MustCompile(`^(?:yaml: )?line (\d+):`)
 
-// Decode reads a YAML mapping into its sections. An empty document has none.
-// Its error says where the document is wrong, but not what the library says
-// of it, which may quote a secret written there.
+// Decode reads a YAML mapping into its sections. An empty document has none,
+// and a second document is an error, which would otherwise go unread. Its
+// error says where the document is wrong, but not what the library says of
+// it, which may quote a secret written there.
 func Decode(data []byte) (map[string]any, error) {
+	dec := yaml.NewDecoder(bytes.NewReader(data))
 	var doc yaml.Node
-	if err := yaml.Unmarshal(data, &doc); err != nil {
+	if err := dec.Decode(&doc); err != nil {
+		if errors.Is(err, io.EOF) {
+			return map[string]any{}, nil
+		}
+		return nil, invalid(err)
+	}
+	var next yaml.Node
+	switch err := dec.Decode(&next); {
+	case err == nil:
+		return nil, fmt.Errorf("line %d, column %d starts a second YAML document, and a file holds one",
+			next.Line, next.Column)
+	case !errors.Is(err, io.EOF):
 		return nil, invalid(err)
 	}
 	if len(doc.Content) == 0 {
