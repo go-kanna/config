@@ -219,9 +219,9 @@ The `validate` tags mean what they mean to kanna-validator, and `LoadX` checks t
 
 A setting that cannot be read leaves its field without the value read, and checking the rules then could report a rule across fields, or the hook, that the value it lacks breaks.
 
-An error goes under the name of the setting where it was set: the variable, `database.pool_max_conns`, or `-database-pool-max-conns`. A setting given nowhere goes under its variable. What a field's own `Validate` reports stays under that name, as `DATABASE_PRIMARY.host`. The hook names a field as kanna-validator does, by its JSON name, or else its Go name, and checks its paths on generating; kanna-config moves what it reports under the name of the field's setting, keeping what follows. An error on the struct as a whole stays under `base`.
+An error goes under the name of the setting where it was set: the variable, `database.pool_max_conns`, or `-database-pool-max-conns`. A setting given nowhere goes under its variable. What a field's own `Validate` reports stays under that name, as `DATABASE_PRIMARY.host`. The hook names a field as kanna-validator does, by its JSON name, or else its Go name. kanna-config checks the hook's paths on generating, and moves what the hook reports under the name of the field's setting, keeping what follows. An error on the struct as a whole stays under `base`.
 
-Only reading turns an error into a code. The rules return what they return, as in kanna-validator, so that one rule reports the same in `LoadX` and in `Validate`: keeping a value out of an error is up to whoever writes the rule, and `rule.Fail` of kanna-value and `validator.Fail` keep it out.
+Only reading turns an error into a code. What a rule returns is returned as it is, as in kanna-validator, so that one rule reports the same in `LoadX` and in `Validate`: keeping a value out of an error is up to whoever writes the rule, and `rule.Fail` of kanna-value and `validator.Fail` keep it out.
 
 `required` is a rule of the value, as in kanna-validator: it rejects the zero value, an explicit `0` or `false` included, and lets a setting given nowhere through when its default is not zero. Nothing tells whether a variable is set. With a string default, `required` holds in `LoadX` always, and still checks a value the program makes by hand in the `Validate` of a struct marked `//kanna:validate`.
 
