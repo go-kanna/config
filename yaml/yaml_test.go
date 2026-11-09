@@ -45,6 +45,19 @@ func TestDecode_Empty(t *testing.T) {
 	}
 }
 
+// A file may mark the start and the end of its one document.
+func TestDecode_Markers(t *testing.T) {
+	t.Parallel()
+
+	got, err := yaml.Decode([]byte("---\napi:\n  port: 8080\n...\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := map[string]any{"api": map[string]any{"port": 8080}}; !reflect.DeepEqual(got, want) {
+		t.Errorf("Decode = %#v, want %#v", got, want)
+	}
+}
+
 // An error says where the document is wrong, never what it holds there, which
 // may be a secret.
 func TestDecode_Error(t *testing.T) {
@@ -59,6 +72,14 @@ func TestDecode_Error(t *testing.T) {
 		{"a colon", "db:\n  password: s3cr3t: x\n", "line 2 is not valid YAML"},
 		{"an open quote", "db:\n  password: \"s3cr3t\n", "line 2 is not valid YAML"},
 		{"a key twice", "db:\n  password: s3cr3t\n  password: s3cr3t\n", "line 3 is not valid YAML"},
+		{
+			"a second document", "db:\n  password: s3cr3t\n---\ndb:\n  password: s3cr3t\n",
+			"line 3, column 1 starts a second YAML document, and a file holds one",
+		},
+		{
+			"a second document that is wrong", "db:\n  password: s3cr3t\n---\ndb:\n  password: \"s3cr3t\n",
+			"line 5 is not valid YAML",
+		},
 	} {
 		_, err := yaml.Decode([]byte(tt.data))
 		if err == nil || err.Error() != tt.want {

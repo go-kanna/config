@@ -161,7 +161,7 @@ api:
 
 A value in a file is read as its text, as a variable is: `20` and `"20"` read the same. A section or a list where a value goes is an error. A null is unset.
 
-A file that does not decode is reported by where it is wrong, such as `read config/production.yaml: line 2, column 13 is not valid YAML`, and not by what the library decoding it says, which may quote a secret written there. A `Decode` of your own should say no more either: `source.Open` returns its error as it is.
+A file that does not decode is reported by where it is wrong, such as `read config/production.yaml: line 2, column 13 is not valid YAML`, and not by what the library decoding it says, which may quote a secret written there. A YAML file holds one document, and a second, after a `---`, is an error where it starts. A `Decode` of your own should say no more either: `source.Open` returns its error as it is.
 
 ## Fields not read
 
