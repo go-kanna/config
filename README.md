@@ -124,7 +124,7 @@ Each field is one setting, named by words: those of the struct, then those of th
 
 The words of the struct set apart the settings of each struct. Two structs of one name, such as `postgres.Config` and `redis.Config`, read the same settings, which is allowed, as sharing a setting may be meant.
 
-The names are external: what a deployment sets. Where the words of the struct are not those, write them with `prefix=`, in snake case: a struct named `OAuth` splits into `o_auth`, and one named `Config` is better set apart.
+The names are external: what a deployment sets. Where the words of the struct are not those, write them with `prefix=`, in snake case: a struct named `OAuth` splits into `o_auth`, and the word `config` of a struct named `Config` says nothing of what it holds.
 
 ```go
 //kanna:config prefix=oauth
@@ -174,7 +174,7 @@ type Database struct {
 }
 ```
 
-`LoadX` leaves such a field zero, and does not check its rules, as the program fills it later; a struct marked `//kanna:validate` as well checks them in its `Validate`. A rule of such a field in a struct without `//kanna:validate` would never run, and stops the run, as does a default of such a field.
+`LoadX` leaves such a field zero, and does not check its rules, as the program fills it later; a struct marked `//kanna:validate` as well checks them in its `Validate`. A rule of such a field in a struct without `//kanna:validate` would never run, and stops the run. So does a default of such a field, in any struct.
 
 ## Defaults
 

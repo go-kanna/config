@@ -124,7 +124,7 @@ validator: DATABASE_WRITER_URL: blank; database.pool_max_conns: greater_than_or_
 
 構造体の語で、構造体ごとに設定を分けられます。`postgres.Config` と `redis.Config` のように名前が同じ構造体は、同じ設定を読みます。共有を意図することもあるので、止めません。
 
-名前は、デプロイの側が決める外の名前です。構造体の語がそれと違うときは、`prefix=` に snake case で書きます。`OAuth` という名前の構造体は `o_auth` に分かれ、`Config` という名前の構造体は分けて名付けたほうがよいからです:
+名前は、デプロイの側が決める外の名前です。構造体の語がそれと違うときは、`prefix=` に snake case で書きます。たとえば、`OAuth` という名前の構造体は `o_auth` に分かれ、`Config` という名前の構造体の語 `config` は、何の設定かを表しません:
 
 ```go
 //kanna:config prefix=oauth
