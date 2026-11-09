@@ -255,8 +255,14 @@ func TestJSON_Error(t *testing.T) {
 		name, data, want string
 	}{
 		{"a bare word", `{"db": {"password": s3cr3t}}`, "line 1, column 21 is not valid JSON"},
-		{"a bad escape", "{\"db\":\n  {\"password\": \"s3\\qcr3t\"}}", "line 2, column 20 is not valid JSON"},
+		{"a bad escape", "{\"db\":\n  {\"password\": \"s3\\qcr3t\"}}", "line 2, column 19 is not valid JSON"},
+		{"not UTF-8", "{\"db\": {\"password\": \"s3\xffcr3t\"}}", "line 1, column 24 is not valid JSON"},
 		{"two objects", "{}\n {}", "line 2, column 2 is not valid JSON"},
+		{"a name twice", "{\"debug\": false,\n \"debug\": true}", "line 2, column 2 repeats a name of its object"},
+		{
+			"a name twice in a section", `{"db": {"password": "s3cr3t", "password": "s3cr3t"}}`,
+			"line 1, column 31 repeats a name of its object",
+		},
 		{"a string", ` "s3cr3t"`, "line 1, column 2 is not a JSON object"},
 		{"nothing", ``, "not valid JSON"},
 	} {
