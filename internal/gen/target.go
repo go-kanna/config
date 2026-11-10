@@ -132,7 +132,7 @@ func plan(
 	for _, a := range args {
 		if !snakeWords.MatchString(a.Value) {
 			diags = append(diags, diag.Errorf(d.Pos, "prefix=%s is not words in snake case", a.Value).
-				WithHints("write it in lower case, its words joined by _, as prefix="+snakeCase(a.Value)))
+				WithHints(snakeHint("prefix=%s", a.Value)))
 			continue
 		}
 		prefix = a.Value
@@ -218,7 +218,7 @@ func fieldOf(fset *token.FileSet, s scan.Struct, prefix string, f scan.Field) (*
 	if name != "" {
 		if !snakeWords.MatchString(name) {
 			return nil, append(diags, fieldError(f, `config:"%s" is not words in snake case`, name).
-				WithHints(`write it in lower case, its words joined by _, as config:"`+snakeCase(name)+`"`))
+				WithHints(snakeHint(`config:"%s"`, name)))
 		}
 		words = name
 	}
@@ -267,9 +267,11 @@ func envName(f scan.Field) (string, []diag.Diag) {
 			diags = append(diags, fieldError(f, "kanna-config takes no option %q in the env tag", opt).WithHints(hint))
 		}
 		return "", diags
-	case name == "", strings.ContainsAny(name, "=\x00"):
-		return "", []diag.Diag{fieldError(f,
-			"env:%q cannot name a variable, which is neither empty nor holds = or NUL", name)}
+	case name == "":
+		return "", []diag.Diag{fieldError(f, `env:"" names no variable`).
+			WithHints("remove the tag to read the variable the words of the struct and the field name")}
+	case strings.ContainsAny(name, "=\x00"):
+		return "", []diag.Diag{fieldError(f, "env:%q names no variable, as no name of a variable holds = or NUL", name)}
 	}
 	return name, nil
 }

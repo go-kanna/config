@@ -1,6 +1,7 @@
 package gen
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
@@ -30,6 +31,21 @@ func snakeCase(name string) string {
 		b.WriteRune(unicode.ToLower(r))
 	}
 	return b.String()
+}
+
+// snakeHint says how to write text, which snakeWords does not match, in snake
+// case: with text so written, in the place of %s in format, when that
+// matches, its words split as snakeCase splits them and joined by _ in place
+// of any other character, such as the space of Bad Name and the dot of a.b.
+func snakeHint(format, text string) string {
+	hint := "write it in lower case, its words joined by _"
+	words := strings.FieldsFunc(snakeCase(text), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	})
+	if fixed := strings.Join(words, "_"); snakeWords.MatchString(fixed) {
+		hint += ", as " + fmt.Sprintf(format, fixed)
+	}
+	return hint
 }
 
 // key is how one setting is named in each place it is looked for.

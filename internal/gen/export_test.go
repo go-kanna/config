@@ -45,3 +45,6 @@ func LongestFirst(paths []string) []string {
 	}
 	return ordered
 }
+
+// SnakeHint says how to write text in snake case, in the place of %s in format.
+var SnakeHint = snakeHint
