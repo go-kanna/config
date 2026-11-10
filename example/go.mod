@@ -15,7 +15,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
-	github.com/go-kanna/internal v0.0.31 // indirect
+	github.com/go-kanna/internal v0.0.32-0.20261110094330-760e419d549c // indirect
 	go.yaml.in/yaml/v3 v3.0.6 // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect

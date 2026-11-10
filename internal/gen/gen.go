@@ -109,7 +109,9 @@ func generate(set packages.Set, roots map[string]bool) ([]output.Change, []diag.
 	pkgs := rootPackages(set, roots)
 	found, diags := targets(set.Fset, pkgs)
 	for _, pkg := range pkgs {
-		diags = append(diags, directive.Loose(directive.Lines(set.Fset, pkg.Syntax), directiveKey)...)
+		lines := directive.Lines(set.Fset, pkg.Syntax)
+		diags = append(diags, directive.Loose(lines, directiveKey)...)
+		diags = append(diags, directive.Misplaced(lines, pkg.Types, directive.StructType, directiveKey)...)
 	}
 
 	byPkg := make(map[string][]target)
