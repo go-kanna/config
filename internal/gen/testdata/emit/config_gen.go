@@ -507,10 +507,6 @@ func LoadUpload(src source.Source) (Upload, error) {
 	if len(errs) > 0 {
 		return Upload{}, errs
 	}
-
-	if len(errs) > 0 {
-		return Upload{}, errs
-	}
 	return x, nil
 }
 
@@ -588,10 +584,6 @@ func LoadFallback(src source.Source) (Fallback, error) {
 		} else {
 			x.Public = o
 		}
-	}
-
-	if len(errs) > 0 {
-		return Fallback{}, errs
 	}
 
 	if len(errs) > 0 {

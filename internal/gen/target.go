@@ -484,9 +484,10 @@ func typeString(t types.Type, s scan.Struct) string {
 	})
 }
 
-// article puts a or an before what, which names a type.
+// article puts a or an before what, which names a type. A uint is said with
+// a y, as you-int.
 func article(what string) string {
-	if strings.ContainsRune("aeiou", rune(what[0])) {
+	if strings.ContainsRune("aeiouAEIOU", rune(what[0])) && !strings.HasPrefix(what, "uint") {
 		return "an " + what
 	}
 	return "a " + what

@@ -122,6 +122,10 @@ func (e *emitter) load(t target) {
 		l.field(fd)
 	}
 	e.printf("\nif len(%s) > 0 {\nreturn %s{}, %s\n}\n", l.errs, t.Name, l.errs)
+	if t.hook == nil && !slices.ContainsFunc(t.fields, func(fd field) bool { return fd.checks != nil }) {
+		e.printf("return %s, nil\n}\n\n", l.x)
+		return
+	}
 
 	body := e.w.Body(s, l.x, l.errs)
 	for _, fd := range t.fields {

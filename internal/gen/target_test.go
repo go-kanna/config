@@ -99,7 +99,7 @@ func TestTargets_Diagnostics(t *testing.T) {
 		},
 		{
 			name: "a default not a Go literal", fields: "Mode uint32 `default:\"08\"`",
-			want: `the default "08" is not an uint32 (field Mode)`,
+			want: `the default "08" is not a uint32 (field Mode)`,
 		},
 		{
 			name: "a default out of range in hex", fields: "Port int8 `default:\"0x80\"`",
