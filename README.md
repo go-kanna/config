@@ -61,7 +61,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 		errs.Add(v.Name, err)
 	} else if ok {
 		namePoolMaxConns = v.Name
-		if n, err := strconv.ParseInt(v.Text, 10, 32); err != nil {
+		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
 			errs.Add(namePoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)
@@ -159,7 +159,7 @@ api:
   port: 8080
 ```
 
-A value in a file is read as its text, as a variable is: `20` and `"20"` read the same, and a YAML `0123` reads as `0123`, not as the octal 83. A section or a list where a value goes is an error. A null is unset.
+A value in a file is read as its text, as a variable is: `20` and `"20"` read the same, and a YAML `0123` reads as `0123`, which an integer setting reads as Go does, as the octal 83, and a string setting as it is. A section or a list where a value goes is an error. A null is unset.
 
 The TOML library does not give the text of a number, a date, or a time, so they are written back from what they are: a number in decimal, so that `0x1F` reads as `31` and `1_000` as `1000`; a float with its point, so that `1.0` reads as `1.0`, which an integer setting rejects, and `1.20` as `1.2`; and a date or a time in the form of RFC 3339, with no time zone it does not name, so that `1979-05-27` reads as `1979-05-27` and `1979-05-27 07:32:00Z` as `1979-05-27T07:32:00Z`. Quote a value to read it as it is written.
 
@@ -189,7 +189,7 @@ type Database struct {
 }
 ```
 
-The default of a string, a bool, a number, a `time.Duration`, or an enum of kanna-value is read on generating, and written as a Go value: `x.PoolMaxConns = 10`, `x.DialTimeout = 5 * time.Second`, a constant of the enum, or `math.NaN()` and `math.Inf(1)` for `NaN` and `+Inf`, which no constant holds and whose rules are checked on reading. One that does not read stops the run. It is checked then by the rules that tell by the value alone, run no code of the program, and need no other field: `required`, the lengths, the comparisons, `oneof`, and `pattern`. A default one of them rejects stops the run, as it would fail every start without the setting. `rule=Type`, `eqfield`, `email`, `url`, `uuid`, and the hook are checked on reading, and so are all the rules of a field whose `required` or `omitempty` asks the `IsZero` method of its type. The default of a value type of kanna-value or of a type with `UnmarshalText` is read when the setting is given nowhere, as a setting is.
+The default of a string, a bool, a number, a `time.Duration`, or an enum of kanna-value is read on generating, and written as a Go value: `x.PoolMaxConns = 10`, an integer as it is written, such as `x.DirMode = 0755`, `x.DialTimeout = 5 * time.Second`, a constant of the enum, or `math.NaN()` and `math.Inf(1)` for `NaN` and `+Inf`, which no constant holds and whose rules are checked on reading. One that does not read stops the run. It is checked then by the rules that tell by the value alone, run no code of the program, and need no other field: `required`, the lengths, the comparisons, `oneof`, and `pattern`. A default one of them rejects stops the run, as it would fail every start without the setting. `rule=Type`, `eqfield`, `email`, `url`, `uuid`, and the hook are checked on reading, and so are all the rules of a field whose `required` or `omitempty` asks the `IsZero` method of its type. The default of a value type of kanna-value or of a type with `UnmarshalText` is read when the setting is given nowhere, as a setting is.
 
 ## Types it reads
 
@@ -203,7 +203,7 @@ The first of these that fits a field's type reads it:
 | a type whose pointer has `UnmarshalText` | `UnmarshalText` (`slog.Level`, `netip.Addr`, `time.Time`) |
 | a string, or a type defined on one | the text as it is |
 | a bool, or a type defined on one | `strconv.ParseBool` |
-| an integer, or a type defined on one | `strconv.ParseInt` or `strconv.ParseUint`, at its size |
+| an integer, or a type defined on one | `strconv.ParseInt` or `strconv.ParseUint`, at its size, as a Go literal: `0755` is octal, and `0x1F`, `0o755`, `0b101`, and `1_000` read too |
 | a float, or a type defined on one | `strconv.ParseFloat`, at its size |
 
 Any other type, such as a pointer, a slice, a map, or a struct, stops the run. A list, such as one separated by commas, is read by a type of its own with `UnmarshalText`, and `dive` on its field checks each element, under the name of the setting with the index, as `CORS_ALLOWED_ORIGINS[1]`. Settings that nest are a struct of their own, marked `//kanna:config`.

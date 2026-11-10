@@ -2,6 +2,7 @@ package gen_test
 
 import (
 	"flag"
+	"io/fs"
 	"log/slog"
 	"math"
 	"net/netip"
@@ -26,6 +27,7 @@ func clearEnv(t *testing.T) {
 		"DATABASE_RATIO", "DATABASE_DEBUG", "DATABASE_RETRIES", "OAUTH_CLIENT_ID", "OAUTH_CLIENT_ID_FILE",
 		"OAUTH_TOKEN", "PORT", "API_MODE", "API_ADMIN", "API_PUBLIC", "API_LEVEL", "API_LISTEN", "API_NAME",
 		"API_ALIAS", "PATHS_HOST", "PATHS_HOST_NAME", "LIMITS_FLOOR", "LIMITS_CEILING", "LIMITS_SCALE",
+		"UPLOAD_DIR_MODE", "UPLOAD_OFFSET",
 	} {
 		t.Setenv(name, "")
 	}
@@ -260,5 +262,61 @@ func TestGenerated_NonFiniteDefaults(t *testing.T) { //nolint:paralleltest // it
 	}
 	if !math.IsInf(got.Floor, -1) || !math.IsInf(float64(got.Ceiling), 1) || !math.IsNaN(float64(got.Scale)) {
 		t.Errorf("LoadLimits = %+v, want -Inf, +Inf, and NaN", got)
+	}
+}
+
+// An integer reads as a Go literal does, in its default, a variable, a flag,
+// and a file alike: 0755 is octal.
+func TestGenerated_IntegerLiterals(t *testing.T) {
+	clearEnv(t)
+
+	got, err := emit.LoadUpload(source.Env())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := (emit.Upload{DirMode: 0o755, Offset: -16}); got != want {
+		t.Errorf("LoadUpload = %+v, want %+v", got, want)
+	}
+
+	for text, want := range map[string]fs.FileMode{
+		"0644": 0o644, "0o600": 0o600, "0x1F": 31, "0b101": 5, "1_000": 1000, "0": 0, "10": 10,
+	} {
+		t.Setenv("UPLOAD_DIR_MODE", text)
+		got, err := emit.LoadUpload(source.Env())
+		if err != nil {
+			t.Errorf("LoadUpload of %q: %v", text, err)
+		} else if got.DirMode != want {
+			t.Errorf("LoadUpload of %q = %v, want %v", text, got.DirMode, want)
+		}
+	}
+
+	for _, text := range []string{"08", "0x", "1__000", "_1", "0x1_", "-1", "0x100000000"} {
+		t.Setenv("UPLOAD_DIR_MODE", text)
+		_, err := emit.LoadUpload(source.Env())
+		if got, want := errString(err), "validator: UPLOAD_DIR_MODE: invalid (type=fs.FileMode)"; got != want {
+			t.Errorf("LoadUpload error of %q = %q, want %q", text, got, want)
+		}
+	}
+	t.Setenv("UPLOAD_DIR_MODE", "")
+
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if err := os.WriteFile(path, []byte(`{"upload": {"dir_mode": "0700"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	flags := flag.NewFlagSet("app", flag.ContinueOnError)
+	emit.DefineUploadFlags(flags)
+	if err := flags.Parse([]string{"-upload-offset", "-0b11"}); err != nil {
+		t.Fatal(err)
+	}
+	src, err := source.Open(source.Sources{Flags: flags, Files: []source.File{{Path: path, Decode: source.JSON}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err = emit.LoadUpload(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := (emit.Upload{DirMode: 0o700, Offset: -3}); got != want {
+		t.Errorf("LoadUpload = %+v, want %+v", got, want)
 	}
 }

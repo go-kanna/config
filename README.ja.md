@@ -61,7 +61,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 		errs.Add(v.Name, err)
 	} else if ok {
 		namePoolMaxConns = v.Name
-		if n, err := strconv.ParseInt(v.Text, 10, 32); err != nil {
+		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
 			errs.Add(namePoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)
@@ -159,7 +159,7 @@ api:
   port: 8080
 ```
 
-ファイルの値は、環境変数と同じくそのテキストとして読みます。`20` と `"20"` は同じに読み、YAML の `0123` は 8 進数の 83 ではなく `0123` と読みます。値の場所にあるセクションやリストは誤りです。null は未設定です。
+ファイルの値は、環境変数と同じくそのテキストとして読みます。`20` と `"20"` は同じに読み、YAML の `0123` は `0123` というテキストで届き、整数の設定は Go と同じく 8 進数の 83 と、文字列の設定はそのまま読みます。値の場所にあるセクションやリストは誤りです。null は未設定です。
 
 TOML のライブラリは数・日付・時刻のテキストを渡さないので、その値から書き戻します。数は 10 進数で、`0x1F` は `31`、`1_000` は `1000` と読みます。浮動小数は小数点つきで、`1.0` は `1.0`（整数の設定では誤り）、`1.20` は `1.2` と読みます。日付と時刻は RFC 3339 の形で、書いていないタイムゾーンは付けず、`1979-05-27` は `1979-05-27`、`1979-05-27 07:32:00Z` は `1979-05-27T07:32:00Z` と読みます。書いたとおりに読みたい値は、引用符で囲みます。
 
@@ -189,7 +189,7 @@ type Database struct {
 }
 ```
 
-文字列、bool、数、`time.Duration`、kanna-value の enum の既定値は、生成時に読み、Go の値（`x.PoolMaxConns = 10`、`x.DialTimeout = 5 * time.Second`、enum の定数）として書き出します。`NaN` と `+Inf` は定数で表せないので `math.NaN()` と `math.Inf(1)` で書き、ルールは読むときに確かめます。読めなければ生成を止めます。そのうえで、値だけで、プログラムのコードを動かさず、ほかのフィールドなしに判定できるルール（`required`、長さ、比較、`oneof`、`pattern`）で確かめます。拒否されれば生成を止めます。設定しない限り、起動のたびに失敗するからです。`rule=Type`、`eqfield`、`email`、`url`、`uuid`、フックは読むときに確かめます。`required` や `omitempty` が型の `IsZero` メソッドに聞くフィールドも、そのルールをすべて読むときに確かめます。kanna-value の値オブジェクトと `UnmarshalText` を持つ型の既定値は、設定と同じく、どこにも設定されていないときに読みます。
+文字列、bool、数、`time.Duration`、kanna-value の enum の既定値は、生成時に読み、Go の値（`x.PoolMaxConns = 10`、整数は書いたとおりの `x.DirMode = 0755`、`x.DialTimeout = 5 * time.Second`、enum の定数）として書き出します。`NaN` と `+Inf` は定数で表せないので `math.NaN()` と `math.Inf(1)` で書き、ルールは読むときに確かめます。読めなければ生成を止めます。そのうえで、値だけで、プログラムのコードを動かさず、ほかのフィールドなしに判定できるルール（`required`、長さ、比較、`oneof`、`pattern`）で確かめます。拒否されれば生成を止めます。設定しない限り、起動のたびに失敗するからです。`rule=Type`、`eqfield`、`email`、`url`、`uuid`、フックは読むときに確かめます。`required` や `omitempty` が型の `IsZero` メソッドに聞くフィールドも、そのルールをすべて読むときに確かめます。kanna-value の値オブジェクトと `UnmarshalText` を持つ型の既定値は、設定と同じく、どこにも設定されていないときに読みます。
 
 ## 読める型
 
@@ -203,7 +203,7 @@ type Database struct {
 | ポインタが `UnmarshalText` を持つ型 | `UnmarshalText`（`slog.Level`、`netip.Addr`、`time.Time`） |
 | 文字列か、それを基にした型 | テキストのまま |
 | bool か、それを基にした型 | `strconv.ParseBool` |
-| 整数か、それを基にした型 | `strconv.ParseInt` か `strconv.ParseUint`（その大きさで） |
+| 整数か、それを基にした型 | `strconv.ParseInt` か `strconv.ParseUint`（その大きさで）。Go のリテラルとして読むので、`0755` は 8 進数で、`0x1F`、`0o755`、`0b101`、`1_000` も読めます |
 | 浮動小数点数か、それを基にした型 | `strconv.ParseFloat`（その大きさで） |
 
 それ以外の型（ポインタ、スライス、マップ、構造体など）は、生成を止めます。カンマで区切ったリストなどは、`UnmarshalText` を持つ型を作って読みます。そのフィールドの `dive` は、要素を 1 つずつ確かめ、誤りを添字を付けた設定の名前（`CORS_ALLOWED_ORIGINS[1]`）の下に置きます。入れ子の設定は、`//kanna:config` を付けた別の構造体にします。

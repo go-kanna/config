@@ -4,6 +4,7 @@ package emit
 
 import (
 	"flag"
+	"io/fs"
 	"log/slog"
 	"math"
 	"net/netip"
@@ -15,15 +16,15 @@ import (
 	"github.com/go-kanna/validator"
 )
 
-// DefineDatabaseFlags defines on fs the flags that LoadDatabase reads Database from.
-func DefineDatabaseFlags(fs *flag.FlagSet) {
-	source.DefineFlag(fs, "database-admin-url", "Database.AdminURL (DATABASE_ADMIN_URL)", "", false)
-	source.DefineFlag(fs, "database-writer-url", "Database.WriterURL (DATABASE_WRITER_URL)", "", false)
-	source.DefineFlag(fs, "database-pool-max-conns", "Database.PoolMaxConns (DATABASE_POOL_MAX_CONNS)", "10", false)
-	source.DefineFlag(fs, "database-dial-timeout", "Database.DialTimeout (DATABASE_DIAL_TIMEOUT)", "5s", false)
-	source.DefineFlag(fs, "database-ratio", "Database.Ratio (DATABASE_RATIO)", "0.5", false)
-	source.DefineFlag(fs, "database-debug", "Database.Debug (DATABASE_DEBUG)", "", true)
-	source.DefineFlag(fs, "database-retries", "Database.Retries (DATABASE_RETRIES)", "", false)
+// DefineDatabaseFlags defines on fs2 the flags that LoadDatabase reads Database from.
+func DefineDatabaseFlags(fs2 *flag.FlagSet) {
+	source.DefineFlag(fs2, "database-admin-url", "Database.AdminURL (DATABASE_ADMIN_URL)", "", false)
+	source.DefineFlag(fs2, "database-writer-url", "Database.WriterURL (DATABASE_WRITER_URL)", "", false)
+	source.DefineFlag(fs2, "database-pool-max-conns", "Database.PoolMaxConns (DATABASE_POOL_MAX_CONNS)", "10", false)
+	source.DefineFlag(fs2, "database-dial-timeout", "Database.DialTimeout (DATABASE_DIAL_TIMEOUT)", "5s", false)
+	source.DefineFlag(fs2, "database-ratio", "Database.Ratio (DATABASE_RATIO)", "0.5", false)
+	source.DefineFlag(fs2, "database-debug", "Database.Debug (DATABASE_DEBUG)", "", true)
+	source.DefineFlag(fs2, "database-retries", "Database.Retries (DATABASE_RETRIES)", "", false)
 }
 
 // LoadDatabase reads Database from src, and checks it by its validate tags.
@@ -55,7 +56,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 		errs.Add(v.Name, err)
 	} else if ok {
 		namePoolMaxConns = v.Name
-		if n, err := strconv.ParseInt(v.Text, 10, 32); err != nil {
+		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
 			errs.Add(namePoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)
@@ -105,7 +106,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 		errs.Add(v.Name, err)
 	} else if ok {
 		nameRetries = v.Name
-		if n, err := strconv.ParseUint(v.Text, 10, 8); err != nil {
+		if n, err := strconv.ParseUint(v.Text, 0, 8); err != nil {
 			errs.Add(nameRetries, validator.FailWith("invalid", map[string]any{"type": "uint8"}))
 		} else {
 			x.Retries = uint8(n)
@@ -130,10 +131,10 @@ func LoadDatabase(src source.Source) (Database, error) {
 	return x, nil
 }
 
-// DefineOAuthFlags defines on fs the flags that LoadOAuth reads OAuth from.
-func DefineOAuthFlags(fs *flag.FlagSet) {
-	source.DefineFlag(fs, "oauth-client-id", "OAuth.ClientID (OAUTH_CLIENT_ID)", "", false)
-	source.DefineFlag(fs, "oauth-token", "OAuth.AuthToken (OAUTH_TOKEN)", "", false)
+// DefineOAuthFlags defines on fs2 the flags that LoadOAuth reads OAuth from.
+func DefineOAuthFlags(fs2 *flag.FlagSet) {
+	source.DefineFlag(fs2, "oauth-client-id", "OAuth.ClientID (OAUTH_CLIENT_ID)", "", false)
+	source.DefineFlag(fs2, "oauth-token", "OAuth.AuthToken (OAUTH_TOKEN)", "", false)
 }
 
 // LoadOAuth reads OAuth from src, and checks it by its validate tags.
@@ -173,16 +174,16 @@ func LoadOAuth(src source.Source) (OAuth, error) {
 	return x, nil
 }
 
-// DefineAPIFlags defines on fs the flags that LoadAPI reads API from.
-func DefineAPIFlags(fs *flag.FlagSet) {
-	source.DefineFlag(fs, "api-port", "API.Port (PORT)", "8080", false)
-	source.DefineFlag(fs, "api-mode", "API.Mode (API_MODE)", "fast", false)
-	source.DefineFlag(fs, "api-admin", "API.Admin (API_ADMIN)", "", false)
-	source.DefineFlag(fs, "api-public", "API.Public (API_PUBLIC)", "", false)
-	source.DefineFlag(fs, "api-level", "API.Level (API_LEVEL)", "info", false)
-	source.DefineFlag(fs, "api-listen", "API.Listen (API_LISTEN)", "", false)
-	source.DefineFlag(fs, "api-name", "API.Name (API_NAME)", "", false)
-	source.DefineFlag(fs, "api-alias", "API.Alias (API_ALIAS)", "", false)
+// DefineAPIFlags defines on fs2 the flags that LoadAPI reads API from.
+func DefineAPIFlags(fs2 *flag.FlagSet) {
+	source.DefineFlag(fs2, "api-port", "API.Port (PORT)", "8080", false)
+	source.DefineFlag(fs2, "api-mode", "API.Mode (API_MODE)", "fast", false)
+	source.DefineFlag(fs2, "api-admin", "API.Admin (API_ADMIN)", "", false)
+	source.DefineFlag(fs2, "api-public", "API.Public (API_PUBLIC)", "", false)
+	source.DefineFlag(fs2, "api-level", "API.Level (API_LEVEL)", "info", false)
+	source.DefineFlag(fs2, "api-listen", "API.Listen (API_LISTEN)", "", false)
+	source.DefineFlag(fs2, "api-name", "API.Name (API_NAME)", "", false)
+	source.DefineFlag(fs2, "api-alias", "API.Alias (API_ALIAS)", "", false)
 }
 
 // LoadAPI reads API from src, and checks it by its validate tags.
@@ -200,7 +201,7 @@ func LoadAPI(src source.Source) (API, error) {
 		errs.Add(v.Name, err)
 	} else if ok {
 		namePort = v.Name
-		if n, err := strconv.ParseInt(v.Text, 10, 0); err != nil {
+		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
 			errs.Add(namePort, validator.FailWith("invalid", map[string]any{"type": "int"}))
 		} else {
 			x.Port = int(n)
@@ -237,7 +238,7 @@ func LoadAPI(src source.Source) (API, error) {
 		errs.Add(v.Name, err)
 	} else if ok {
 		namePublic = v.Name
-		if n, err := strconv.ParseInt(v.Text, 10, 0); err != nil {
+		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
 			errs.Add(namePublic, validator.FailWith("invalid", map[string]any{"type": "Port"}))
 		} else if o, err := NewPort(int(n)); err != nil {
 			errs.Add(namePublic, source.Coded(err, "Port"))
@@ -337,10 +338,10 @@ func LoadAPI(src source.Source) (API, error) {
 	return x, nil
 }
 
-// DefinePathsFlags defines on fs the flags that LoadPaths reads Paths from.
-func DefinePathsFlags(fs *flag.FlagSet) {
-	source.DefineFlag(fs, "paths-host", "Paths.Host (PATHS_HOST)", "", false)
-	source.DefineFlag(fs, "paths-host-name", "Paths.HostName (PATHS_HOST_NAME)", "", false)
+// DefinePathsFlags defines on fs2 the flags that LoadPaths reads Paths from.
+func DefinePathsFlags(fs2 *flag.FlagSet) {
+	source.DefineFlag(fs2, "paths-host", "Paths.Host (PATHS_HOST)", "", false)
+	source.DefineFlag(fs2, "paths-host-name", "Paths.HostName (PATHS_HOST_NAME)", "", false)
 }
 
 // LoadPaths reads Paths from src, and checks it by its validate tags.
@@ -393,11 +394,11 @@ func LoadPaths(src source.Source) (Paths, error) {
 	return x, nil
 }
 
-// DefineLimitsFlags defines on fs the flags that LoadLimits reads Limits from.
-func DefineLimitsFlags(fs *flag.FlagSet) {
-	source.DefineFlag(fs, "limits-floor", "Limits.Floor (LIMITS_FLOOR)", "-Inf", false)
-	source.DefineFlag(fs, "limits-ceiling", "Limits.Ceiling (LIMITS_CEILING)", "+Inf", false)
-	source.DefineFlag(fs, "limits-scale", "Limits.Scale (LIMITS_SCALE)", "NaN", false)
+// DefineLimitsFlags defines on fs2 the flags that LoadLimits reads Limits from.
+func DefineLimitsFlags(fs2 *flag.FlagSet) {
+	source.DefineFlag(fs2, "limits-floor", "Limits.Floor (LIMITS_FLOOR)", "-Inf", false)
+	source.DefineFlag(fs2, "limits-ceiling", "Limits.Ceiling (LIMITS_CEILING)", "+Inf", false)
+	source.DefineFlag(fs2, "limits-scale", "Limits.Scale (LIMITS_SCALE)", "NaN", false)
 }
 
 // LoadLimits reads Limits from src, and checks it by its validate tags.
@@ -458,6 +459,57 @@ func LoadLimits(src source.Source) (Limits, error) {
 
 	if len(errs) > 0 {
 		return Limits{}, errs
+	}
+	return x, nil
+}
+
+// DefineUploadFlags defines on fs2 the flags that LoadUpload reads Upload from.
+func DefineUploadFlags(fs2 *flag.FlagSet) {
+	source.DefineFlag(fs2, "upload-dir-mode", "Upload.DirMode (UPLOAD_DIR_MODE)", "0755", false)
+	source.DefineFlag(fs2, "upload-offset", "Upload.Offset (UPLOAD_OFFSET)", "-0x10", false)
+}
+
+// LoadUpload reads Upload from src, and checks it by its validate tags.
+// It returns the validator.Errors of each setting it cannot read, or else of
+// each rule the settings break, under the name each goes by where it is set.
+func LoadUpload(src source.Source) (Upload, error) {
+	var (
+		x    Upload
+		errs validator.Errors
+	)
+
+	x.DirMode = 0755
+	nameDirMode := "UPLOAD_DIR_MODE"
+	if v, ok, err := src.Lookup(source.Key{Env: "UPLOAD_DIR_MODE", File: []string{"upload", "dir_mode"}, Flag: "upload-dir-mode"}); err != nil {
+		errs.Add(v.Name, err)
+	} else if ok {
+		nameDirMode = v.Name
+		if n, err := strconv.ParseUint(v.Text, 0, 32); err != nil {
+			errs.Add(nameDirMode, validator.FailWith("invalid", map[string]any{"type": "fs.FileMode"}))
+		} else {
+			x.DirMode = fs.FileMode(n)
+		}
+	}
+
+	x.Offset = -0x10
+	nameOffset := "UPLOAD_OFFSET"
+	if v, ok, err := src.Lookup(source.Key{Env: "UPLOAD_OFFSET", File: []string{"upload", "offset"}, Flag: "upload-offset"}); err != nil {
+		errs.Add(v.Name, err)
+	} else if ok {
+		nameOffset = v.Name
+		if n, err := strconv.ParseInt(v.Text, 0, 16); err != nil {
+			errs.Add(nameOffset, validator.FailWith("invalid", map[string]any{"type": "int16"}))
+		} else {
+			x.Offset = int16(n)
+		}
+	}
+
+	if len(errs) > 0 {
+		return Upload{}, errs
+	}
+
+	if len(errs) > 0 {
+		return Upload{}, errs
 	}
 	return x, nil
 }

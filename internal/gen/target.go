@@ -294,17 +294,17 @@ func defaultOf(fset *token.FileSet, r reader, text string, s scan.Struct) (*defa
 		}
 		def.value, def.lit = constant.MakeBool(b), strconv.FormatBool(b)
 	case readInt:
-		n, err := strconv.ParseInt(text, 10, bitsOr(r.bits))
+		n, err := strconv.ParseInt(text, 0, bitsOr(r.bits))
 		if err != nil {
 			return bad()
 		}
-		def.value, def.lit = constant.MakeInt64(n), strconv.FormatInt(n, 10)
+		def.value, def.lit = constant.MakeInt64(n), text
 	case readUint:
-		n, err := strconv.ParseUint(text, 10, bitsOr(r.bits))
+		n, err := strconv.ParseUint(text, 0, bitsOr(r.bits))
 		if err != nil {
 			return bad()
 		}
-		def.value, def.lit = constant.MakeUint64(n), strconv.FormatUint(n, 10)
+		def.value, def.lit = constant.MakeUint64(n), text
 	case readFloat:
 		n, err := strconv.ParseFloat(text, r.bits)
 		if err != nil {
