@@ -37,6 +37,9 @@ func emit(pkgPath, pkgName string, found []target, declared []string) *gofile.Fi
 
 	e := &emitter{f: f, w: w, src: f.Import(sourcePath, "source")}
 	for _, t := range found {
+		e.importAll(t)
+	}
+	for _, t := range found {
 		e.define(t)
 		e.load(t)
 	}
@@ -58,6 +61,20 @@ type emitter struct {
 
 func (e *emitter) printf(format string, args ...any) {
 	fmt.Fprintf(e.f, format, args...)
+}
+
+// importAll imports every package the functions of t read its fields with,
+// ahead of naming any local, so that a parameter or a local yields its name to
+// an import, as in fs2 *flag.FlagSet beside package io/fs.
+func (e *emitter) importAll(t target) {
+	e.f.Import("flag", "flag")
+	l := &loader{emitter: e, t: t}
+	for _, fd := range t.fields {
+		l.read(fd.read, "", "", "", func(string) string { return "" })
+		if fd.def != nil && fd.read.staticDefault() {
+			l.defaultExpr(fd)
+		}
+	}
 }
 
 // define writes the function defining the flags of t.
@@ -208,10 +225,10 @@ func (l *loader) read(r reader, text, name, typeName string, assign func(string)
 	case readBool:
 		return parse(l.locals["b"], fmt.Sprintf("%s.ParseBool(%s)", strconvPkg(), text), !l.is(r.typ, types.Bool))
 	case readInt:
-		call := fmt.Sprintf("%s.ParseInt(%s, 10, %d)", strconvPkg(), text, r.bits)
+		call := fmt.Sprintf("%s.ParseInt(%s, 0, %d)", strconvPkg(), text, r.bits)
 		return parse(l.locals["n"], call, !l.is(r.typ, types.Int64))
 	case readUint:
-		call := fmt.Sprintf("%s.ParseUint(%s, 10, %d)", strconvPkg(), text, r.bits)
+		call := fmt.Sprintf("%s.ParseUint(%s, 0, %d)", strconvPkg(), text, r.bits)
 		return parse(l.locals["n"], call, !l.is(r.typ, types.Uint64))
 	case readFloat:
 		call := fmt.Sprintf("%s.ParseFloat(%s, %d)", strconvPkg(), text, r.bits)

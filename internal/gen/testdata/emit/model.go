@@ -4,6 +4,7 @@
 package emit
 
 import (
+	"io/fs"
 	"log/slog"
 	"net/netip"
 	"strings"
@@ -116,4 +117,13 @@ type Limits struct {
 	Floor   float64 `default:"-Inf" validate:"lte=0"`
 	Ceiling float32 `default:"+Inf"`
 	Scale   Factor  `default:"NaN"`
+}
+
+// Upload reads integers as Go literals, and its package io/fs keeps its name
+// beside the flags parameter.
+//
+//kanna:config
+type Upload struct {
+	DirMode fs.FileMode `default:"0755"`
+	Offset  int16       `default:"-0x10"`
 }

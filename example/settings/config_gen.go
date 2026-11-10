@@ -34,7 +34,7 @@ func LoadServer(src source.Source) (Server, error) {
 		errs.Add(v.Name, err)
 	} else if ok {
 		namePort = v.Name
-		if n, err := strconv.ParseInt(v.Text, 10, 0); err != nil {
+		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
 			errs.Add(namePort, validator.FailWith("invalid", map[string]any{"type": "int"}))
 		} else {
 			x.Port = int(n)
@@ -120,7 +120,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 		errs.Add(v.Name, err)
 	} else if ok {
 		namePoolMaxConns = v.Name
-		if n, err := strconv.ParseInt(v.Text, 10, 32); err != nil {
+		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
 			errs.Add(namePoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)

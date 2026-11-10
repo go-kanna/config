@@ -85,6 +85,18 @@ func TestTargets_Diagnostics(t *testing.T) {
 			want: `the default "300" is not an int8 (field Port)`,
 		},
 		{
+			name: "a default not a Go literal", fields: "Mode uint32 `default:\"08\"`",
+			want: `the default "08" is not an uint32 (field Mode)`,
+		},
+		{
+			name: "a default out of range in hex", fields: "Port int8 `default:\"0x80\"`",
+			want: `the default "0x80" is not an int8 (field Port)`,
+		},
+		{
+			name: "an octal default a rule rejects", fields: "Mode uint32 `default:\"0755\" validate:\"lte=400\"`",
+			want: `the default "0755" breaks a rule of its validate tag: less_than_or_equal_to (count=400) (field Mode)`,
+		},
+		{
 			name: "a default a rule rejects", fields: "Port int `default:\"0\" validate:\"gte=1\"`",
 			want: `the default "0" breaks a rule of its validate tag: greater_than_or_equal_to (count=1) (field Port)`,
 		},
