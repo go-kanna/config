@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"maps"
 	"os"
 	"reflect"
 	"slices"
@@ -270,4 +271,39 @@ func Coded(err error, typ string) error {
 		return err
 	}
 	return validator.FailWith("invalid", map[string]any{"type": typ})
+}
+
+// Default returns err, which reading the default of a setting returned, with
+// default=true added to its params, so that it tells a default that cannot be
+// read from a setting that cannot, without holding the default. errors.Is and
+// errors.As still reach err.
+func Default(err error) error {
+	c, ok := errors.AsType[validator.Coded](err)
+	if !ok {
+		c = validator.Fail("invalid")
+	}
+	return defaultError{Coded: c, err: err}
+}
+
+type defaultError struct {
+	validator.Coded
+
+	err error
+}
+
+func (e defaultError) Params() map[string]any {
+	p := maps.Clone(e.Coded.Params())
+	if p == nil {
+		p = make(map[string]any, 1)
+	}
+	p["default"] = true
+	return p
+}
+
+func (e defaultError) Error() string {
+	return validator.FailWith(e.Code(), e.Params()).Error()
+}
+
+func (e defaultError) Unwrap() error {
+	return e.err
 }

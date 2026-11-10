@@ -27,7 +27,7 @@ func clearEnv(t *testing.T) {
 		"DATABASE_RATIO", "DATABASE_DEBUG", "DATABASE_RETRIES", "OAUTH_CLIENT_ID", "OAUTH_CLIENT_ID_FILE",
 		"OAUTH_TOKEN", "PORT", "API_MODE", "API_ADMIN", "API_PUBLIC", "API_LEVEL", "API_LISTEN", "API_NAME",
 		"API_ALIAS", "PATHS_HOST", "PATHS_HOST_NAME", "LIMITS_FLOOR", "LIMITS_CEILING", "LIMITS_SCALE",
-		"UPLOAD_DIR_MODE", "UPLOAD_OFFSET",
+		"UPLOAD_DIR_MODE", "UPLOAD_OFFSET", "FALLBACK_LEVEL", "FALLBACK_ADMIN", "FALLBACK_PUBLIC",
 	} {
 		t.Setenv(name, "")
 	}
@@ -222,6 +222,26 @@ func TestGenerated_Rejected(t *testing.T) {
 	_, err = emit.LoadAPI(source.Env())
 	if got, want := errString(err), "validator: API_PUBLIC: invalid (type=Port)"; got != want {
 		t.Errorf("LoadAPI error = %q, want %q", got, want)
+	}
+}
+
+// A default that cannot be read is reported as one, without its text.
+func TestGenerated_RejectedDefault(t *testing.T) {
+	clearEnv(t)
+
+	_, err := emit.LoadFallback(source.Env())
+	want := "validator: FALLBACK_LEVEL: invalid (default=true, type=slog.Level); " +
+		"FALLBACK_ADMIN: email (default=true); FALLBACK_PUBLIC: invalid (default=true, type=Port)"
+	if got := errString(err); got != want {
+		t.Errorf("LoadFallback error = %q, want %q", got, want)
+	}
+
+	t.Setenv("FALLBACK_LEVEL", "loud")
+	t.Setenv("FALLBACK_ADMIN", "ops@example.com")
+	t.Setenv("FALLBACK_PUBLIC", "8080")
+	_, err = emit.LoadFallback(source.Env())
+	if got, want := errString(err), "validator: FALLBACK_LEVEL: invalid (type=slog.Level)"; got != want {
+		t.Errorf("LoadFallback error = %q, want %q", got, want)
 	}
 }
 

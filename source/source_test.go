@@ -371,3 +371,24 @@ func TestCoded(t *testing.T) {
 		t.Errorf("Coded(plain) = %q, want invalid naming the type, not the value", got.Error())
 	}
 }
+
+func TestDefault(t *testing.T) {
+	t.Parallel()
+
+	tooLong := validator.FailWith("too_long", map[string]any{"count": 10})
+	got := source.Default(tooLong)
+	if !errors.Is(got, tooLong) {
+		t.Errorf("Default(too_long) = %v, does not reach it", got)
+	}
+	if want := "validator: too_long (count=10, default=true)"; got.Error() != want {
+		t.Errorf("Default(too_long) = %q, want %q", got.Error(), want)
+	}
+	if _, ok := tooLong.Params()["default"]; ok {
+		t.Error("Default changed the params of the error it marks")
+	}
+
+	got = source.Default(source.Coded(errors.New(`slog: level string "loud": unknown name`), "slog.Level"))
+	if want := "validator: invalid (default=true, type=slog.Level)"; got.Error() != want {
+		t.Errorf("Default(invalid) = %q, want %q", got.Error(), want)
+	}
+}
