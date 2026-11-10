@@ -122,6 +122,10 @@ func (e *emitter) load(t target) {
 		l.field(fd)
 	}
 	e.printf("\nif len(%s) > 0 {\nreturn %s{}, %s\n}\n", l.errs, t.Name, l.errs)
+	if t.hook == nil && !slices.ContainsFunc(t.fields, func(fd field) bool { return fd.checks != nil }) {
+		e.printf("return %s, nil\n}\n\n", l.x)
+		return
+	}
 
 	body := e.w.Body(s, l.x, l.errs)
 	for _, fd := range t.fields {
@@ -148,6 +152,19 @@ type loader struct {
 	// locals are the names of the other locals by what they would be called,
 	// and names the variable holding the name of each field's setting.
 	locals, names map[string]string
+
+	// def is set while writing the reading of a default, whose errors are
+	// marked as the default's.
+	def bool
+}
+
+// fail returns err, an error of reading a setting, marked as the default's
+// while a default is read.
+func (l *loader) fail(err string) string {
+	if l.def {
+		return fmt.Sprintf("%s.Default(%s)", l.src, err)
+	}
+	return err
 }
 
 // needsName reports whether the name of fd's setting is needed beyond where it
@@ -173,7 +190,9 @@ func (l *loader) field(fd field) {
 	}
 	l.printf("%s", l.read(fd.read, v+".Text", name, typeString(fd.Type, l.t.Struct), l.assign(fd)))
 	if fd.def != nil && !fd.read.staticDefault() {
+		l.def = true
 		def := l.read(fd.read, strconv.Quote(fd.def.text), name, typeString(fd.Type, l.t.Struct), l.assign(fd))
+		l.def = false
 		l.printf("} else {\n%s", def)
 	}
 	l.printf("}\n")
@@ -197,8 +216,8 @@ func (l *loader) keyLit(k key) string {
 // handing the value to assign.
 func (l *loader) read(r reader, text, name, typeName string, assign func(string) string) string {
 	invalid := func() string {
-		return fmt.Sprintf("%s.Add(%s, %s.FailWith(\"invalid\", map[string]any{\"type\": %q}))\n",
-			l.errs, name, l.w.Runtime(), typeName)
+		return fmt.Sprintf("%s.Add(%s, %s)\n", l.errs, name,
+			l.fail(fmt.Sprintf("%s.FailWith(\"invalid\", map[string]any{\"type\": %q})", l.w.Runtime(), typeName)))
 	}
 	parse := func(local, call string, convert bool) string {
 		value := local
@@ -244,8 +263,8 @@ func (l *loader) read(r reader, text, name, typeName string, assign func(string)
 	case readUnmarshal:
 		u, err := l.locals["u"], l.locals["err"]
 		return fmt.Sprintf("var %s %s\n", u, types.TypeString(r.typ, l.f.Qualifier)) +
-			fmt.Sprintf("if %s := %s.UnmarshalText([]byte(%s)); %s != nil {\n%s.Add(%s, %s.Coded(%s, %q))\n} else {\n%s}\n",
-				err, u, text, err, l.errs, name, l.src, err, typeName, assign(u))
+			fmt.Sprintf("if %s := %s.UnmarshalText([]byte(%s)); %s != nil {\n%s.Add(%s, %s)\n} else {\n%s}\n",
+				err, u, text, err, l.errs, name, l.coded(err, typeName), assign(u))
 	}
 	panic(fmt.Sprintf("emit: unknown reader %d", r.kind))
 }
@@ -260,8 +279,13 @@ func (l *loader) construct(
 	if q := l.f.Qualifier(ctor.Pkg()); q != "" {
 		fn = q + "." + fn
 	}
-	return fmt.Sprintf("if %s, %s := %s(%s); %s != nil {\n%s.Add(%s, %s.Coded(%s, %q))\n} else {\n%s}\n",
-		local, err, fn, value, err, l.errs, name, l.src, err, typeName, assign(local))
+	return fmt.Sprintf("if %s, %s := %s(%s); %s != nil {\n%s.Add(%s, %s)\n} else {\n%s}\n",
+		local, err, fn, value, err, l.errs, name, l.coded(err, typeName), assign(local))
+}
+
+// coded returns what reports err, returned for a value of type typeName.
+func (l *loader) coded(err, typeName string) string {
+	return l.fail(fmt.Sprintf("%s.Coded(%s, %q)", l.src, err, typeName))
 }
 
 // is reports whether t is the predeclared type kind itself, which a value

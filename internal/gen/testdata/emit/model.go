@@ -127,3 +127,12 @@ type Upload struct {
 	DirMode fs.FileMode `default:"0755"`
 	Offset  int16       `default:"-0x10"`
 }
+
+// Fallback has defaults read when the program runs, which it rejects.
+//
+//kanna:config
+type Fallback struct {
+	Level  slog.Level `default:"loud"`
+	Admin  Email      `default:"ops"`
+	Public Port       `default:"port"`
+}

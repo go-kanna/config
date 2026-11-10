@@ -65,7 +65,20 @@ func TestTargets_Diagnostics(t *testing.T) {
 		},
 		{
 			name: "a name no variable has", fields: "Port int `env:\"A=B\"`",
-			want: `env:"A=B" cannot name a variable, which is neither empty nor holds = or NUL (field Port)`,
+			want: `env:"A=B" names no variable, as no name of a variable holds = or NUL (field Port)`,
+		},
+		{
+			name: "an empty env", fields: "Port int `env:\"\"`",
+			want: `env:"" names no variable (field Port)` + "\n" +
+				"  remove the tag to read the variable the words of the struct and the field name",
+		},
+		{
+			name: "words with a space", fields: "Token string `config:\"Bad Name\"`",
+			want: `  write it in lower case, its words joined by _, as config:"bad_name"`,
+		},
+		{
+			name: "words with a dot", fields: "Token string `config:\"a.b\"`",
+			want: `  write it in lower case, its words joined by _, as config:"a_b"`,
 		},
 		{
 			name: "a tag of caarlos0/env", fields: "Port int `envDefault:\"8080\"`",
@@ -86,7 +99,7 @@ func TestTargets_Diagnostics(t *testing.T) {
 		},
 		{
 			name: "a default not a Go literal", fields: "Mode uint32 `default:\"08\"`",
-			want: `the default "08" is not an uint32 (field Mode)`,
+			want: `the default "08" is not a uint32 (field Mode)`,
 		},
 		{
 			name: "a default out of range in hex", fields: "Port int8 `default:\"0x80\"`",
@@ -168,6 +181,11 @@ func TestTargets_StructDiagnostics(t *testing.T) {
 			name: "an argument it does not take",
 			src:  "package test\n\n//kanna:config strict\ntype Settings struct{ Port int }\n",
 			want: "strict",
+		},
+		{
+			name: "a prefix with a dash",
+			src:  "package test\n\n//kanna:config prefix=Bad-Name\ntype Settings struct{ Port int }\n",
+			want: "  write it in lower case, its words joined by _, as prefix=bad_name",
 		},
 		{
 			name: "two structs agreeing on some names",

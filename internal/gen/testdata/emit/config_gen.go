@@ -261,7 +261,7 @@ func LoadAPI(src source.Source) (API, error) {
 	} else {
 		var u slog.Level
 		if err := u.UnmarshalText([]byte("info")); err != nil {
-			errs.Add(nameLevel, source.Coded(err, "slog.Level"))
+			errs.Add(nameLevel, source.Default(source.Coded(err, "slog.Level")))
 		} else {
 			x.Level = u
 		}
@@ -507,9 +507,87 @@ func LoadUpload(src source.Source) (Upload, error) {
 	if len(errs) > 0 {
 		return Upload{}, errs
 	}
+	return x, nil
+}
+
+// DefineFallbackFlags defines on fs2 the flags that LoadFallback reads Fallback from.
+func DefineFallbackFlags(fs2 *flag.FlagSet) {
+	source.DefineFlag(fs2, "fallback-level", "Fallback.Level (FALLBACK_LEVEL)", "loud", false)
+	source.DefineFlag(fs2, "fallback-admin", "Fallback.Admin (FALLBACK_ADMIN)", "ops", false)
+	source.DefineFlag(fs2, "fallback-public", "Fallback.Public (FALLBACK_PUBLIC)", "port", false)
+}
+
+// LoadFallback reads Fallback from src, and checks it by its validate tags.
+// It returns the validator.Errors of each setting it cannot read, or else of
+// each rule the settings break, under the name each goes by where it is set.
+func LoadFallback(src source.Source) (Fallback, error) {
+	var (
+		x    Fallback
+		errs validator.Errors
+	)
+
+	nameLevel := "FALLBACK_LEVEL"
+	if v, ok, err := src.Lookup(source.Key{Env: "FALLBACK_LEVEL", File: []string{"fallback", "level"}, Flag: "fallback-level"}); err != nil {
+		errs.Add(v.Name, err)
+	} else if ok {
+		nameLevel = v.Name
+		var u slog.Level
+		if err := u.UnmarshalText([]byte(v.Text)); err != nil {
+			errs.Add(nameLevel, source.Coded(err, "slog.Level"))
+		} else {
+			x.Level = u
+		}
+	} else {
+		var u slog.Level
+		if err := u.UnmarshalText([]byte("loud")); err != nil {
+			errs.Add(nameLevel, source.Default(source.Coded(err, "slog.Level")))
+		} else {
+			x.Level = u
+		}
+	}
+
+	nameAdmin := "FALLBACK_ADMIN"
+	if v, ok, err := src.Lookup(source.Key{Env: "FALLBACK_ADMIN", File: []string{"fallback", "admin"}, Flag: "fallback-admin"}); err != nil {
+		errs.Add(v.Name, err)
+	} else if ok {
+		nameAdmin = v.Name
+		if o, err := NewEmail(v.Text); err != nil {
+			errs.Add(nameAdmin, source.Coded(err, "Email"))
+		} else {
+			x.Admin = o
+		}
+	} else {
+		if o, err := NewEmail("ops"); err != nil {
+			errs.Add(nameAdmin, source.Default(source.Coded(err, "Email")))
+		} else {
+			x.Admin = o
+		}
+	}
+
+	namePublic := "FALLBACK_PUBLIC"
+	if v, ok, err := src.Lookup(source.Key{Env: "FALLBACK_PUBLIC", File: []string{"fallback", "public"}, Flag: "fallback-public"}); err != nil {
+		errs.Add(v.Name, err)
+	} else if ok {
+		namePublic = v.Name
+		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
+			errs.Add(namePublic, validator.FailWith("invalid", map[string]any{"type": "Port"}))
+		} else if o, err := NewPort(int(n)); err != nil {
+			errs.Add(namePublic, source.Coded(err, "Port"))
+		} else {
+			x.Public = o
+		}
+	} else {
+		if n, err := strconv.ParseInt("port", 0, 0); err != nil {
+			errs.Add(namePublic, source.Default(validator.FailWith("invalid", map[string]any{"type": "Port"})))
+		} else if o, err := NewPort(int(n)); err != nil {
+			errs.Add(namePublic, source.Default(source.Coded(err, "Port")))
+		} else {
+			x.Public = o
+		}
+	}
 
 	if len(errs) > 0 {
-		return Upload{}, errs
+		return Fallback{}, errs
 	}
 	return x, nil
 }

@@ -143,7 +143,7 @@ A setting is looked for in the flags, then in the environment, then in the files
 
 A variable may hold, rather than the value, the path of a file holding it, as Kubernetes mounts a secret: `DATABASE_PASSWORD_FILE` gives `DATABASE_PASSWORD` the content of that file, less one line ending at its end. Both set stop the read with an error.
 
-Flags are those of the `flag` package, defined by `DefineXFlags` on a `FlagSet` the program parses; only the flags set count. A bool flag may stand alone, as `-database-debug`.
+Flags are those of the `flag` package, defined by `DefineXFlags` on a `FlagSet` the program parses before `source.Open`, which rejects one not parsed yet; only the flags set count. A bool flag may stand alone, as `-database-debug`.
 
 ## Files
 
@@ -159,7 +159,7 @@ api:
   port: 8080
 ```
 
-A value in a file is read as its text, as a variable is: `20` and `"20"` read the same, and a YAML `0123` reads as `0123`, which an integer setting reads as Go does, as the octal 83, and a string setting as it is. A section or a list where a value goes is an error. A null is unset.
+A value in a file is read as its text, as a variable is: `20` and `"20"` read the same, and a YAML `0123` reads as `0123`, which an integer setting reads as Go does, as the octal 83, and a string setting as it is. A section or a list where a value goes is an error. A null is unset, and so is each setting under a null section, such as a YAML section whose keys are all commented out.
 
 The TOML library does not give the text of a number, a date, or a time, so they are written back from what they are: a number in decimal, so that `0x1F` reads as `31` and `1_000` as `1000`; a float with its point, so that `1.0` reads as `1.0`, which an integer setting rejects, and `1.20` as `1.2`; and a date or a time in the form of RFC 3339, with no time zone it does not name, so that `1979-05-27` reads as `1979-05-27` and `1979-05-27 07:32:00Z` as `1979-05-27T07:32:00Z`. Quote a value to read it as it is written.
 
@@ -208,7 +208,7 @@ The first of these that fits a field's type reads it:
 
 Any other type, such as a pointer, a slice, a map, or a struct, stops the run. A list, such as one separated by commas, is read by a type of its own with `UnmarshalText`, and `dive` on its field checks each element, under the name of the setting with the index, as `CORS_ALLOWED_ORIGINS[1]`. Settings that nest are a struct of their own, marked `//kanna:config`.
 
-What cannot be read is reported by a code and its params, never by the value, which a setting may keep secret: a number, a bool, or a duration that does not read is `invalid` with the type, as in `DATABASE_POOL_MAX_CONNS: invalid (type=int32)`. What a constructor or an `UnmarshalText` returns is kept when it has a code, as the rules of kanna-value do, and otherwise is `invalid` with the type: the error of `slog.Level` holds the value. Having a code is no proof of holding no value; what a code and its params say is up to whoever writes the type. The `type` param is there for a log or a structured error, and no promise of a placeholder a translation can show.
+What cannot be read is reported by a code and its params, never by the value, which a setting may keep secret: a number, a bool, or a duration that does not read is `invalid` with the type, as in `DATABASE_POOL_MAX_CONNS: invalid (type=int32)`. What a constructor or an `UnmarshalText` returns is kept when it has a code, as the rules of kanna-value do, and otherwise is `invalid` with the type: the error of `slog.Level` holds the value. Having a code is no proof of holding no value; what a code and its params say is up to whoever writes the type. The `type` param is there for a log or a structured error, and no promise of a placeholder a translation can show. A default that cannot be read when the program runs gets the param `default=true` besides, and not its text, as in `SERVER_LEVEL: invalid (default=true, type=slog.Level)`; the rules it breaks get none.
 
 ## Checking
 

@@ -68,7 +68,7 @@ func LoadServer(src source.Source) (Server, error) {
 	} else {
 		var u slog.Level
 		if err := u.UnmarshalText([]byte("info")); err != nil {
-			errs.Add(nameLevel, source.Coded(err, "slog.Level"))
+			errs.Add(nameLevel, source.Default(source.Coded(err, "slog.Level")))
 		} else {
 			x.Level = u
 		}

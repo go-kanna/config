@@ -111,6 +111,16 @@ func TestLookup_FlagsWinOverTheEnvironment(t *testing.T) {
 	}
 }
 
+func TestOpen_FlagsNotParsed(t *testing.T) {
+	t.Parallel()
+
+	fs := flag.NewFlagSet("app", flag.ContinueOnError)
+	source.DefineFlag(fs, "database-writer-url", "Database.WriterURL", "", false)
+	if _, err := source.Open(source.Sources{Flags: fs}); err == nil || !strings.Contains(err.Error(), "not parsed") {
+		t.Errorf("Open error = %v, want one saying the flags are not parsed", err)
+	}
+}
+
 func TestLookup_TheEnvironmentWinsOverFiles(t *testing.T) {
 	t.Setenv("DATABASE_WRITER_URL", "postgres://env@db/app")
 
@@ -131,7 +141,8 @@ func TestLookup_Files(t *testing.T) {
 	base := writeFile(t, "base.json", `{
 		"database": {"writer_url": "postgres://base@db/app", "pool_max_conns": 10, "debug": true, "ratio": 0.5,
 			"replica": {"url": "x"}, "hosts": ["a", "b"], "none": null},
-		"api": "flat"
+		"api": "flat",
+		"cache": null
 	}`)
 	prod := writeFile(t, "prod.json", `{"database": {"pool_max_conns": 30}}`)
 	src, err := source.Open(source.Sources{Files: []source.File{
@@ -163,21 +174,27 @@ func TestLookup_Files(t *testing.T) {
 		{path: []string{"database", "missing"}},
 		{path: []string{"database", "none"}},
 		{path: []string{"other", "key"}},
+		{path: []string{"cache", "url"}},
 		{path: nil},
 		{
 			path: []string{"database", "replica"},
 			want: source.Value{Name: "database.replica"},
-			err:  "is a section, where a value goes",
+			err:  "is a section in " + base + ", where a value goes",
 		},
 		{
 			path: []string{"database", "hosts"},
 			want: source.Value{Name: "database.hosts"},
-			err:  "is a list, where a value goes",
+			err:  "is a list in " + base + ", where a value goes",
 		},
 		{
 			path: []string{"api", "port"},
 			want: source.Value{Name: "api.port"},
-			err:  "api of " + base + " is a value, with nothing under it",
+			err:  "api is a value in " + base + ", where a section goes",
+		},
+		{
+			path: []string{"database", "hosts", "first"},
+			want: source.Value{Name: "database.hosts.first"},
+			err:  "database.hosts is a list in " + base + ", where a section goes",
 		},
 	}
 	for _, tt := range tests {
@@ -316,6 +333,7 @@ func TestScalars(t *testing.T) {
 	when := time.Date(2026, 11, 7, 9, 30, 0, 0, time.UTC)
 	tree := map[string]any{"s": map[string]any{
 		"int": 3, "int64": int64(-4), "uint64": uint64(5), "time": when, "stringer": stringer{}, "chan": make(chan int),
+		"tables": []map[string]any{{"x": 1}},
 	}}
 	src, err := source.Open(source.Sources{Files: []source.File{
 		{Path: writeFile(t, "any", ""), Decode: func([]byte) (map[string]any, error) { return tree, nil }},
@@ -331,8 +349,12 @@ func TestScalars(t *testing.T) {
 		}
 	}
 	_, _, err = src.Lookup(source.Key{File: []string{"s", "chan"}})
-	if err == nil || !strings.Contains(err.Error(), "is a chan int") {
+	if err == nil || !strings.HasPrefix(err.Error(), "is something of type chan int in ") {
 		t.Errorf("Lookup(chan) error = %v", err)
+	}
+	_, _, err = src.Lookup(source.Key{File: []string{"s", "tables", "x"}})
+	if err == nil || !strings.HasPrefix(err.Error(), "s.tables is a list in ") {
+		t.Errorf("Lookup(tables) error = %v", err)
 	}
 }
 
@@ -347,5 +369,26 @@ func TestCoded(t *testing.T) {
 	coded, ok := errors.AsType[validator.Coded](got)
 	if !ok || coded.Code() != "invalid" || coded.Params()["type"] != "slog.Level" || strings.Contains(got.Error(), `"x"`) {
 		t.Errorf("Coded(plain) = %q, want invalid naming the type, not the value", got.Error())
+	}
+}
+
+func TestDefault(t *testing.T) {
+	t.Parallel()
+
+	tooLong := validator.FailWith("too_long", map[string]any{"count": 10})
+	got := source.Default(tooLong)
+	if !errors.Is(got, tooLong) {
+		t.Errorf("Default(too_long) = %v, does not reach it", got)
+	}
+	if want := "validator: too_long (count=10, default=true)"; got.Error() != want {
+		t.Errorf("Default(too_long) = %q, want %q", got.Error(), want)
+	}
+	if _, ok := tooLong.Params()["default"]; ok {
+		t.Error("Default changed the params of the error it marks")
+	}
+
+	got = source.Default(source.Coded(errors.New(`slog: level string "loud": unknown name`), "slog.Level"))
+	if want := "validator: invalid (default=true, type=slog.Level)"; got.Error() != want {
+		t.Errorf("Default(invalid) = %q, want %q", got.Error(), want)
 	}
 }
