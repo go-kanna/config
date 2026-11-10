@@ -38,22 +38,3 @@ func TestEmit(t *testing.T) {
 	}
 	pkgtest.Golden(t, filepath.Join(dir, "config_gen.go"), got)
 }
-
-func TestLongestFirst(t *testing.T) {
-	t.Parallel()
-
-	for _, tt := range []struct {
-		paths, want []string
-	}{
-		{[]string{"a", "b"}, []string{"a", "b"}},
-		{[]string{"a", "a.b"}, []string{"a.b", "a"}},
-		{[]string{"a", "x", "a[0]"}, []string{"a[0]", "a", "x"}},
-		{[]string{"a", "ab"}, []string{"a", "ab"}},
-		{[]string{"a", "a.b.c", "a.b"}, []string{"a.b.c", "a.b", "a"}},
-		{[]string{"a.b.c", "a.b", "a"}, []string{"a.b.c", "a.b", "a"}},
-	} {
-		if got := gen.LongestFirst(tt.paths); !slices.Equal(got, tt.want) {
-			t.Errorf("LongestFirst(%q) = %q, want %q", tt.paths, got, tt.want)
-		}
-	}
-}

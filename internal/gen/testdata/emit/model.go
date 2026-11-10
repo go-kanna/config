@@ -89,7 +89,7 @@ type API struct {
 
 func (a API) validate(errs *validator.Errors) {
 	if a.Alias != "" && a.Alias == a.Name {
-		errs.Add("Alias", validator.Fail("same_as_name"))
+		errs.Add(validator.Field("Alias"), validator.Fail("same_as_name"))
 	}
 }
 
@@ -103,7 +103,7 @@ type Paths struct {
 
 func (p Paths) validate(errs *validator.Errors) {
 	if p.HostName == "-" {
-		errs.Add("host.name", validator.Fail("dash"))
+		errs.Add(validator.Field("host.name"), validator.Fail("dash"))
 	}
 }
 
