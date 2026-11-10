@@ -179,17 +179,22 @@ func TestLookup_Files(t *testing.T) {
 		{
 			path: []string{"database", "replica"},
 			want: source.Value{Name: "database.replica"},
-			err:  "is a section, where a value goes",
+			err:  "is a section in " + base + ", where a value goes",
 		},
 		{
 			path: []string{"database", "hosts"},
 			want: source.Value{Name: "database.hosts"},
-			err:  "is a list, where a value goes",
+			err:  "is a list in " + base + ", where a value goes",
 		},
 		{
 			path: []string{"api", "port"},
 			want: source.Value{Name: "api.port"},
-			err:  "api of " + base + " is a value, with nothing under it",
+			err:  "api is a value in " + base + ", where a section goes",
+		},
+		{
+			path: []string{"database", "hosts", "first"},
+			want: source.Value{Name: "database.hosts.first"},
+			err:  "database.hosts is a list in " + base + ", where a section goes",
 		},
 	}
 	for _, tt := range tests {
@@ -312,6 +317,7 @@ func TestScalars(t *testing.T) {
 	when := time.Date(2026, 11, 7, 9, 30, 0, 0, time.UTC)
 	tree := map[string]any{"s": map[string]any{
 		"int": 3, "int64": int64(-4), "uint64": uint64(5), "time": when, "stringer": stringer{}, "chan": make(chan int),
+		"tables": []map[string]any{{"x": 1}},
 	}}
 	src, err := source.Open(source.Sources{Files: []source.File{
 		{Path: writeFile(t, "any", ""), Decode: func([]byte) (map[string]any, error) { return tree, nil }},
@@ -327,8 +333,12 @@ func TestScalars(t *testing.T) {
 		}
 	}
 	_, _, err = src.Lookup(source.Key{File: []string{"s", "chan"}})
-	if err == nil || !strings.Contains(err.Error(), "is a chan int") {
+	if err == nil || !strings.HasPrefix(err.Error(), "is something of type chan int in ") {
 		t.Errorf("Lookup(chan) error = %v", err)
+	}
+	_, _, err = src.Lookup(source.Key{File: []string{"s", "tables", "x"}})
+	if err == nil || !strings.HasPrefix(err.Error(), "s.tables is a list in ") {
+		t.Errorf("Lookup(tables) error = %v", err)
 	}
 }
 

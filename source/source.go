@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -159,22 +160,22 @@ func (f file) lookup(path []string) (Value, bool, error) {
 	}
 	name := strings.Join(path, ".")
 	var node any = f.tree
-	for _, p := range path {
+	for i, p := range path {
 		if node == nil {
 			return Value{}, false, nil
 		}
 		section, ok := node.(map[string]any)
 		if !ok {
-			above := strings.Join(path[:len(path)-1], ".")
-			return Value{Name: name}, false, fmt.Errorf("%s of %s is a value, with nothing under it", above, f.path)
+			above := strings.Join(path[:i], ".")
+			return Value{Name: name}, false, fmt.Errorf("%s is %s in %s, where a section goes", above, shape(node), f.path)
 		}
 		if node, ok = section[p]; !ok {
 			return Value{}, false, nil
 		}
 	}
-	text, err := scalar(node)
-	if err != nil {
-		return Value{Name: name}, false, fmt.Errorf("%s of %s %w", name, f.path, err)
+	text, ok := scalar(node)
+	if !ok {
+		return Value{Name: name}, false, fmt.Errorf("is %s in %s, where a value goes", shape(node), f.path)
 	}
 	if text == "" {
 		return Value{}, false, nil
@@ -182,37 +183,48 @@ func (f file) lookup(path []string) (Value, bool, error) {
 	return Value{Text: text, Name: name}, true, nil
 }
 
-// errNotValue reports a section or a list where a setting's value goes.
-var errNotValue = errors.New("is not a value")
-
 // scalar returns the text of a value as a decoder of a file gives it, which
-// the code kanna-config generates reads as it reads a variable.
-func scalar(v any) (string, error) {
+// the code kanna-config generates reads as it reads a variable, and false for
+// what is not a value, such as a section or a list.
+func scalar(v any) (string, bool) {
 	switch v := v.(type) {
 	case nil:
-		return "", nil
+		return "", true
 	case string:
-		return v, nil
+		return v, true
 	case bool:
-		return strconv.FormatBool(v), nil
+		return strconv.FormatBool(v), true
 	case int:
-		return strconv.Itoa(v), nil
+		return strconv.Itoa(v), true
 	case int64:
-		return strconv.FormatInt(v, 10), nil
+		return strconv.FormatInt(v, 10), true
 	case uint64:
-		return strconv.FormatUint(v, 10), nil
+		return strconv.FormatUint(v, 10), true
 	case float64:
-		return strconv.FormatFloat(v, 'f', -1, 64), nil
+		return strconv.FormatFloat(v, 'f', -1, 64), true
 	case time.Time:
-		return v.Format(time.RFC3339Nano), nil
-	case map[string]any:
-		return "", fmt.Errorf("is a section, where a value goes: %w", errNotValue)
-	case []any:
-		return "", fmt.Errorf("is a list, where a value goes: %w", errNotValue)
+		return v.Format(time.RFC3339Nano), true
+	case map[string]any, []any:
+		return "", false
 	case fmt.Stringer:
-		return v.String(), nil
+		return v.String(), true
 	}
-	return "", fmt.Errorf("is a %T, which is not a value: %w", v, errNotValue)
+	return "", false
+}
+
+// shape names what v, which a decoder of a file gives, is, for an error to
+// say where it does not go.
+func shape(v any) string {
+	if _, ok := scalar(v); ok {
+		return "a value"
+	}
+	switch reflect.ValueOf(v).Kind() { //nolint:exhaustive // the rest are named by their type
+	case reflect.Map, reflect.Struct:
+		return "a section"
+	case reflect.Slice, reflect.Array:
+		return "a list"
+	}
+	return fmt.Sprintf("something of type %T", v)
 }
 
 // DefineFlag defines on fs the flag name, whose text a Source opened with fs
