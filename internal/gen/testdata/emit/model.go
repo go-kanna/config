@@ -136,3 +136,10 @@ type Fallback struct {
 	Admin  Email      `default:"ops"`
 	Public Port       `default:"port"`
 }
+
+// Replica shares the section of Database, whose keys it takes as known.
+//
+//kanna:config prefix=database
+type Replica struct {
+	ReplicaURL string
+}

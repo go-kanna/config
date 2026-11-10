@@ -165,6 +165,15 @@ api:
 
 A value in a file is read as its text, as a variable is: `20` and `"20"` read the same, and a YAML `0123` reads as `0123`, which an integer setting reads as Go does, as the octal 83, and a string setting as it is. A section or a list where a value goes is an error. A null is unset, and so is each setting under a null section, such as a YAML section whose keys are all commented out.
 
+A key in the section of a struct that none of its fields reads is an error under its name, without its value, such as
+`database.pool_max_con: is no setting of the section database`, so that a misspelt key does not leave its default in
+place. A key that differs from one of them in case alone, such as `database.Writer_URL`, says which it means, as does a
+section at the top whose name differs in case alone, such as `Database` (`did you mean database?`). A section of no
+struct, such as `databse`, is not looked at, as the same file may hold the settings of a program that reads other
+structs. The keys known are those of every struct of the package that reads the section. A struct of another package is
+not known, so when two structs of different packages share a section and their fields differ, write `prefix=` on one of
+them.
+
 The TOML library does not give the text of a number, a date, or a time, so they are written back from what they are: a number in decimal, so that `0x1F` reads as `31` and `1_000` as `1000`; a float with its point, so that `1.0` reads as `1.0`, which an integer setting rejects, and `1.20` as `1.2`; and a date or a time in the form of RFC 3339, with no time zone it does not name, so that `1979-05-27` reads as `1979-05-27` and `1979-05-27 07:32:00Z` as `1979-05-27T07:32:00Z`. Quote a value to read it as it is written.
 
 A file that does not decode is reported by where it is wrong, such as `read config/production.yaml: line 2, column 13 is not valid YAML`, and not by what the library decoding it says, which may quote a secret written there. A YAML file holds one document, and a second, after a `---`, is an error where it starts. `source.JSON` reads with encoding/json/v2, so a name a JSON object holds twice is an error where the second one is. A `Decode` of your own should say no more either: `source.Open` returns its error as it is.

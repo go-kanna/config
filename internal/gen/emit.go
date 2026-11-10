@@ -35,7 +35,7 @@ func emit(pkgPath, pkgName string, found []target, declared []string) *gofile.Fi
 	f.Reserve(taken...)
 	w := validation.NewWriter(f, planned, taken)
 
-	e := &emitter{f: f, w: w, src: f.Import(sourcePath, "source")}
+	e := &emitter{f: f, w: w, src: f.Import(sourcePath, "source"), keys: sectionKeys(found)}
 	for _, t := range found {
 		e.importAll(t)
 	}
@@ -57,6 +57,27 @@ type emitter struct {
 
 	// src is the name the file imports package source under.
 	src string
+
+	// keys are the keys of each section, of every struct reading it.
+	keys map[string][]string
+}
+
+// sectionKeys returns the keys of each section of a file that the structs of
+// found read, so that a struct sharing its section with another of the
+// package takes the keys of both as known.
+func sectionKeys(found []target) map[string][]string {
+	keys := map[string][]string{}
+	for _, t := range found {
+		for _, fd := range t.fields {
+			if k := fd.key.file[1]; !slices.Contains(keys[t.section], k) {
+				keys[t.section] = append(keys[t.section], k)
+			}
+		}
+	}
+	for _, k := range keys {
+		slices.Sort(k)
+	}
+	return keys
 }
 
 func (e *emitter) printf(format string, args ...any) {
@@ -102,7 +123,7 @@ func (e *emitter) load(t target) {
 		in: s.Name("src"), x: s.Name("x"), errs: s.Name("errs"),
 		locals: make(map[string]string), names: make(map[string]string),
 	}
-	for _, base := range []string{"v", "ok", "err", "b", "n", "d", "e", "u", "o", "hook", "fe", "p", "rest"} {
+	for _, base := range []string{"v", "ok", "err", "b", "n", "d", "e", "u", "o", "hook", "fe", "p", "rest", "keys"} {
 		l.locals[base] = s.Name(base)
 	}
 	for _, fd := range t.fields {
@@ -121,6 +142,7 @@ func (e *emitter) load(t target) {
 		e.printf("\n")
 		l.field(fd)
 	}
+	l.unknown()
 	e.printf("\nif len(%s) > 0 {\nreturn %s{}, %s\n}\n", l.errs, t.Name, l.errs)
 	if t.hook == nil && !slices.ContainsFunc(t.fields, func(fd field) bool { return fd.checks != nil }) {
 		e.printf("return %s, nil\n}\n\n", l.x)
@@ -165,6 +187,19 @@ func (l *loader) fail(err string) string {
 		return fmt.Sprintf("%s.Default(%s)", l.src, err)
 	}
 	return err
+}
+
+// unknown writes the reporting of what the section of the struct holds besides
+// the keys of the structs reading it.
+func (l *loader) unknown() {
+	keys := make([]string, len(l.keys[l.t.section]))
+	for i, k := range l.keys[l.t.section] {
+		keys[i] = strconv.Quote(k)
+	}
+	v, name := l.locals["v"], l.locals["keys"]
+	l.printf("\n%s := []string{%s}\n", name, strings.Join(keys, ", "))
+	l.printf("for _, %s := range %s.Unknown(%q, %s) {\n%s.Add(%s.Name, %s.UnknownKey(%s.Name, %q, %s))\n}\n",
+		v, l.in, l.t.section, name, l.errs, v, l.src, v, l.t.section, name)
 }
 
 // needsName reports whether the name of fd's setting is needed beyond where it

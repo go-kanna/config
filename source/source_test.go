@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -390,5 +391,52 @@ func TestDefault(t *testing.T) {
 	got = source.Default(source.Coded(errors.New(`slog: level string "loud": unknown name`), "slog.Level"))
 	if want := "validator: invalid (default=true, type=slog.Level)"; got.Error() != want {
 		t.Errorf("Default(invalid) = %q, want %q", got.Error(), want)
+	}
+}
+
+func TestUnknown(t *testing.T) {
+	t.Parallel()
+
+	src, err := source.Open(source.Sources{Files: []source.File{
+		{Path: writeFile(t, "a.json", `{
+			"database": {"writer_url": "x", "pool_max_con": 99, "Writer_URL": "y", "pool": {"max": 1}},
+			"Database": {"writer_url": "z"},
+			"databse": {"writer_url": "w"},
+			"api": {"port": 1}
+		}`), Decode: source.JSON},
+		{Path: writeFile(t, "b.json", `{"database": {"pool_max_con": 5, "dialTimeout": "1s"}}`), Decode: source.JSON},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := src.Unknown("database", []string{"pool_max_conns", "writer_url"})
+	want := []source.Value{
+		{Name: "Database"},
+		{Text: "y", Name: "database.Writer_URL"},
+		{Name: "database.pool"},
+		{Text: "99", Name: "database.pool_max_con"},
+		{Text: "1s", Name: "database.dialTimeout"},
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("Unknown = %+v, want %+v", got, want)
+	}
+	if got := source.Env().Unknown("database", nil); got != nil {
+		t.Errorf("Env().Unknown = %+v, want none", got)
+	}
+}
+
+func TestUnknownKey(t *testing.T) {
+	t.Parallel()
+
+	keys := []string{"pool_max_conns", "writer_url"}
+	for name, want := range map[string]string{
+		"database.pool_max_con": "is no setting of the section database",
+		"database.Writer_URL":   "is no setting of the section database; did you mean database.writer_url?",
+		"Database":              "names no section; did you mean database?",
+	} {
+		if got := source.UnknownKey(name, "database", keys).Error(); got != want {
+			t.Errorf("UnknownKey(%s) = %q, want %q", name, got, want)
+		}
 	}
 }

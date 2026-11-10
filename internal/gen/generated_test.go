@@ -27,7 +27,7 @@ func clearEnv(t *testing.T) {
 		"DATABASE_RATIO", "DATABASE_DEBUG", "DATABASE_RETRIES", "OAUTH_CLIENT_ID", "OAUTH_CLIENT_ID_FILE",
 		"OAUTH_TOKEN", "PORT", "API_MODE", "API_ADMIN", "API_PUBLIC", "API_LEVEL", "API_LISTEN", "API_NAME",
 		"API_ALIAS", "PATHS_HOST", "PATHS_HOST_NAME", "LIMITS_FLOOR", "LIMITS_CEILING", "LIMITS_SCALE",
-		"UPLOAD_DIR_MODE", "UPLOAD_OFFSET", "FALLBACK_LEVEL", "FALLBACK_ADMIN", "FALLBACK_PUBLIC",
+		"UPLOAD_DIR_MODE", "UPLOAD_OFFSET", "FALLBACK_LEVEL", "FALLBACK_ADMIN", "FALLBACK_PUBLIC", "DATABASE_REPLICA_URL",
 	} {
 		t.Setenv(name, "")
 	}
@@ -338,5 +338,37 @@ func TestGenerated_IntegerLiterals(t *testing.T) {
 	}
 	if want := (emit.Upload{DirMode: 0o700, Offset: -3}); got != want {
 		t.Errorf("LoadUpload = %+v, want %+v", got, want)
+	}
+}
+
+// A key of the section that no struct of the package reads is an error under
+// its name, without its value; a key of Replica, which shares the section, and
+// a section of another struct are not.
+func TestGenerated_UnknownKeys(t *testing.T) { //nolint:paralleltest // it sets variables of the process
+	clearEnv(t)
+
+	path := filepath.Join(t.TempDir(), "settings.json")
+	settings := `{
+		"database": {"writer_url": "postgres://writer@db/app", "replica_url": "r", "pool_max_con": 99, "Debug": true},
+		"Database": {},
+		"api": {"secret": "s"}
+	}`
+	if err := os.WriteFile(path, []byte(settings), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	src, err := source.Open(source.Sources{Files: []source.File{{Path: path, Decode: source.JSON}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = emit.LoadDatabase(src)
+	want := "validator: Database: names no section; did you mean database?; " +
+		"database.Debug: is no setting of the section database; did you mean database.debug?; " +
+		"database.pool_max_con: is no setting of the section database"
+	if got := errString(err); got != want {
+		t.Errorf("LoadDatabase error = %q, want %q", got, want)
+	}
+	if _, err := emit.LoadReplica(src); errString(err) != want {
+		t.Errorf("LoadReplica error = %q, want %q", errString(err), want)
 	}
 }
