@@ -3,11 +3,11 @@ package toml_test
 import (
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/go-kanna/config/toml"
 )
 
+// A value is read as text, and a date or a time without a time zone gets none.
 func TestDecode(t *testing.T) {
 	t.Parallel()
 
@@ -15,22 +15,38 @@ func TestDecode(t *testing.T) {
 [database]
 writer_url = "postgres://writer@db/app"
 pool_max_conns = 20
-ratio = 0.5
+hex = 0x1F
+thousand = 1_000
+ratio = 1.20
+whole = 1.0
+large = 1e300
+inf = -inf
 debug = true
-started = 2026-11-07T09:30:00Z
+started = 2026-11-07 09:30:00Z
+offset = 2026-11-07T09:30:00.5-08:00
+day = 1979-05-27
+at = 07:32:00.25
+local = 1979-05-27T07:32:00
+hosts = ["a", "b"]
 
 [api]
 port = 8080
+
+[[servers]]
+name = "a"
 `))
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := map[string]any{
 		"database": map[string]any{
-			"writer_url": "postgres://writer@db/app", "pool_max_conns": int64(20), "ratio": 0.5, "debug": true,
-			"started": time.Date(2026, 11, 7, 9, 30, 0, 0, time.UTC),
+			"writer_url": "postgres://writer@db/app", "pool_max_conns": "20", "hex": "31", "thousand": "1000", "ratio": "1.2",
+			"whole": "1.0", "large": "1e+300", "inf": "-Inf", "debug": "true",
+			"started": "2026-11-07T09:30:00Z", "offset": "2026-11-07T09:30:00.5-08:00",
+			"day": "1979-05-27", "at": "07:32:00.25", "local": "1979-05-27T07:32:00", "hosts": []any{"a", "b"},
 		},
-		"api": map[string]any{"port": int64(8080)},
+		"api":     map[string]any{"port": "8080"},
+		"servers": []any{map[string]any{"name": "a"}},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Decode = %#v, want %#v", got, want)
