@@ -38,14 +38,14 @@ func LoadDatabase(src source.Source) (Database, error) {
 	)
 
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_ADMIN_URL", File: []string{"database", "admin_url"}, Flag: "database-admin-url"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		x.AdminURL = v.Text
 	}
 
 	nameWriterURL := "DATABASE_WRITER_URL"
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_WRITER_URL", File: []string{"database", "writer_url"}, Flag: "database-writer-url"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameWriterURL = v.Name
 		x.WriterURL = DSN(v.Text)
@@ -54,11 +54,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	x.PoolMaxConns = 10
 	namePoolMaxConns := "DATABASE_POOL_MAX_CONNS"
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_POOL_MAX_CONNS", File: []string{"database", "pool_max_conns"}, Flag: "database-pool-max-conns"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		namePoolMaxConns = v.Name
 		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
-			errs.Add(namePoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
+			errs.Add(validator.Field(namePoolMaxConns), validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
@@ -67,11 +67,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	x.DialTimeout = 5 * time.Second
 	nameDialTimeout := "DATABASE_DIAL_TIMEOUT"
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_DIAL_TIMEOUT", File: []string{"database", "dial_timeout"}, Flag: "database-dial-timeout"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameDialTimeout = v.Name
 		if d, err := time.ParseDuration(v.Text); err != nil {
-			errs.Add(nameDialTimeout, validator.FailWith("invalid", map[string]any{"type": "time.Duration"}))
+			errs.Add(validator.Field(nameDialTimeout), validator.FailWith("invalid", map[string]any{"type": "time.Duration"}))
 		} else {
 			x.DialTimeout = d
 		}
@@ -80,11 +80,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	x.Ratio = 0.5
 	nameRatio := "DATABASE_RATIO"
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_RATIO", File: []string{"database", "ratio"}, Flag: "database-ratio"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameRatio = v.Name
 		if n, err := strconv.ParseFloat(v.Text, 32); err != nil {
-			errs.Add(nameRatio, validator.FailWith("invalid", map[string]any{"type": "float32"}))
+			errs.Add(validator.Field(nameRatio), validator.FailWith("invalid", map[string]any{"type": "float32"}))
 		} else {
 			x.Ratio = float32(n)
 		}
@@ -92,11 +92,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 
 	nameDebug := "DATABASE_DEBUG"
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_DEBUG", File: []string{"database", "debug"}, Flag: "database-debug"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameDebug = v.Name
 		if b, err := strconv.ParseBool(v.Text); err != nil {
-			errs.Add(nameDebug, validator.FailWith("invalid", map[string]any{"type": "bool"}))
+			errs.Add(validator.Field(nameDebug), validator.FailWith("invalid", map[string]any{"type": "bool"}))
 		} else {
 			x.Debug = b
 		}
@@ -104,11 +104,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 
 	nameRetries := "DATABASE_RETRIES"
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_RETRIES", File: []string{"database", "retries"}, Flag: "database-retries"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameRetries = v.Name
 		if n, err := strconv.ParseUint(v.Text, 0, 8); err != nil {
-			errs.Add(nameRetries, validator.FailWith("invalid", map[string]any{"type": "uint8"}))
+			errs.Add(validator.Field(nameRetries), validator.FailWith("invalid", map[string]any{"type": "uint8"}))
 		} else {
 			x.Retries = uint8(n)
 		}
@@ -116,7 +116,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 
 	keys := []string{"admin_url", "debug", "dial_timeout", "pool_max_conns", "ratio", "replica_url", "retries", "writer_url"}
 	for _, v := range src.Unknown("database", keys) {
-		errs.Add(v.Name, source.UnknownKey(v.Name, "database", keys))
+		errs.Add(validator.Field(v.Name), source.UnknownKey(v.Name, "database", keys))
 	}
 
 	if len(errs) > 0 {
@@ -124,11 +124,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	}
 
 	if x.WriterURL == "" {
-		errs.Add(nameWriterURL, validator.Blank())
+		errs.Add(validator.Field(nameWriterURL), validator.Blank())
 	}
 
 	if x.PoolMaxConns < 1 {
-		errs.Add(namePoolMaxConns, validator.GreaterThanOrEqualTo[int32](1))
+		errs.Add(validator.Field(namePoolMaxConns), validator.GreaterThanOrEqualTo[int32](1))
 	}
 
 	if len(errs) > 0 {
@@ -155,21 +155,21 @@ func LoadOAuth(src source.Source) (OAuth, error) {
 
 	nameClientID := "OAUTH_CLIENT_ID"
 	if v, ok, err := src.Lookup(source.Key{Env: "OAUTH_CLIENT_ID", File: []string{"oauth", "client_id"}, Flag: "oauth-client-id"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameClientID = v.Name
 		x.ClientID = v.Text
 	}
 
 	if v, ok, err := src.Lookup(source.Key{Env: "OAUTH_TOKEN", File: []string{"oauth", "token"}, Flag: "oauth-token"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		x.AuthToken = v.Text
 	}
 
 	keys := []string{"client_id", "token"}
 	for _, v := range src.Unknown("oauth", keys) {
-		errs.Add(v.Name, source.UnknownKey(v.Name, "oauth", keys))
+		errs.Add(validator.Field(v.Name), source.UnknownKey(v.Name, "oauth", keys))
 	}
 
 	if len(errs) > 0 {
@@ -177,7 +177,7 @@ func LoadOAuth(src source.Source) (OAuth, error) {
 	}
 
 	if x.ClientID == "" {
-		errs.Add(nameClientID, validator.Blank())
+		errs.Add(validator.Field(nameClientID), validator.Blank())
 	}
 
 	if len(errs) > 0 {
@@ -211,11 +211,11 @@ func LoadAPI(src source.Source) (API, error) {
 	x.Port = 8080
 	namePort := "PORT"
 	if v, ok, err := src.Lookup(source.Key{Env: "PORT", File: []string{"api", "port"}, Flag: "api-port"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		namePort = v.Name
 		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
-			errs.Add(namePort, validator.FailWith("invalid", map[string]any{"type": "int"}))
+			errs.Add(validator.Field(namePort), validator.FailWith("invalid", map[string]any{"type": "int"}))
 		} else {
 			x.Port = int(n)
 		}
@@ -224,11 +224,11 @@ func LoadAPI(src source.Source) (API, error) {
 	x.Mode = ModeFast
 	nameMode := "API_MODE"
 	if v, ok, err := src.Lookup(source.Key{Env: "API_MODE", File: []string{"api", "mode"}, Flag: "api-mode"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameMode = v.Name
 		if e, err := NewMode(v.Text); err != nil {
-			errs.Add(nameMode, source.Coded(err, "Mode"))
+			errs.Add(validator.Field(nameMode), source.Coded(err, "Mode"))
 		} else {
 			x.Mode = e
 		}
@@ -236,11 +236,11 @@ func LoadAPI(src source.Source) (API, error) {
 
 	nameAdmin := "API_ADMIN"
 	if v, ok, err := src.Lookup(source.Key{Env: "API_ADMIN", File: []string{"api", "admin"}, Flag: "api-admin"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameAdmin = v.Name
 		if o, err := NewEmail(v.Text); err != nil {
-			errs.Add(nameAdmin, source.Coded(err, "Email"))
+			errs.Add(validator.Field(nameAdmin), source.Coded(err, "Email"))
 		} else {
 			x.Admin = o
 		}
@@ -248,13 +248,13 @@ func LoadAPI(src source.Source) (API, error) {
 
 	namePublic := "API_PUBLIC"
 	if v, ok, err := src.Lookup(source.Key{Env: "API_PUBLIC", File: []string{"api", "public"}, Flag: "api-public"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		namePublic = v.Name
 		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
-			errs.Add(namePublic, validator.FailWith("invalid", map[string]any{"type": "Port"}))
+			errs.Add(validator.Field(namePublic), validator.FailWith("invalid", map[string]any{"type": "Port"}))
 		} else if o, err := NewPort(int(n)); err != nil {
-			errs.Add(namePublic, source.Coded(err, "Port"))
+			errs.Add(validator.Field(namePublic), source.Coded(err, "Port"))
 		} else {
 			x.Public = o
 		}
@@ -262,19 +262,19 @@ func LoadAPI(src source.Source) (API, error) {
 
 	nameLevel := "API_LEVEL"
 	if v, ok, err := src.Lookup(source.Key{Env: "API_LEVEL", File: []string{"api", "level"}, Flag: "api-level"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameLevel = v.Name
 		var u slog.Level
 		if err := u.UnmarshalText([]byte(v.Text)); err != nil {
-			errs.Add(nameLevel, source.Coded(err, "slog.Level"))
+			errs.Add(validator.Field(nameLevel), source.Coded(err, "slog.Level"))
 		} else {
 			x.Level = u
 		}
 	} else {
 		var u slog.Level
 		if err := u.UnmarshalText([]byte("info")); err != nil {
-			errs.Add(nameLevel, source.Default(source.Coded(err, "slog.Level")))
+			errs.Add(validator.Field(nameLevel), source.Default(source.Coded(err, "slog.Level")))
 		} else {
 			x.Level = u
 		}
@@ -282,12 +282,12 @@ func LoadAPI(src source.Source) (API, error) {
 
 	nameListen := "API_LISTEN"
 	if v, ok, err := src.Lookup(source.Key{Env: "API_LISTEN", File: []string{"api", "listen"}, Flag: "api-listen"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameListen = v.Name
 		var u netip.Addr
 		if err := u.UnmarshalText([]byte(v.Text)); err != nil {
-			errs.Add(nameListen, source.Coded(err, "netip.Addr"))
+			errs.Add(validator.Field(nameListen), source.Coded(err, "netip.Addr"))
 		} else {
 			x.Listen = u
 		}
@@ -295,7 +295,7 @@ func LoadAPI(src source.Source) (API, error) {
 
 	nameName := "API_NAME"
 	if v, ok, err := src.Lookup(source.Key{Env: "API_NAME", File: []string{"api", "name"}, Flag: "api-name"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameName = v.Name
 		x.Name = v.Text
@@ -303,7 +303,7 @@ func LoadAPI(src source.Source) (API, error) {
 
 	nameAlias := "API_ALIAS"
 	if v, ok, err := src.Lookup(source.Key{Env: "API_ALIAS", File: []string{"api", "alias"}, Flag: "api-alias"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameAlias = v.Name
 		x.Alias = v.Text
@@ -311,7 +311,7 @@ func LoadAPI(src source.Source) (API, error) {
 
 	keys := []string{"admin", "alias", "level", "listen", "mode", "name", "port", "public"}
 	for _, v := range src.Unknown("api", keys) {
-		errs.Add(v.Name, source.UnknownKey(v.Name, "api", keys))
+		errs.Add(validator.Field(v.Name), source.UnknownKey(v.Name, "api", keys))
 	}
 
 	if len(errs) > 0 {
@@ -319,14 +319,14 @@ func LoadAPI(src source.Source) (API, error) {
 	}
 
 	if x.Port < 1 {
-		errs.Add(namePort, validator.GreaterThanOrEqualTo(1))
+		errs.Add(validator.Field(namePort), validator.GreaterThanOrEqualTo(1))
 	}
 	if x.Port > 65535 {
-		errs.Add(namePort, validator.LessThanOrEqualTo(65535))
+		errs.Add(validator.Field(namePort), validator.LessThanOrEqualTo(65535))
 	}
 
 	if x.Name == "" {
-		errs.Add(nameName, validator.Blank())
+		errs.Add(validator.Field(nameName), validator.Blank())
 	}
 
 	var hook validator.Errors
@@ -342,8 +342,9 @@ func LoadAPI(src source.Source) (API, error) {
 			{"name", nameName},
 			{"Alias", nameAlias},
 		} {
-			if rest, ok := strings.CutPrefix(fe.Field, p.path); ok && (rest == "" || rest[0] == '.' || rest[0] == '[') {
-				fe.Field = p.name + rest
+			if len(fe.Segments) > 0 && fe.Segments[0] == (validator.Segment{Kind: validator.FieldSegment, Name: p.path}) {
+				fe.Field = p.name + strings.TrimPrefix(fe.Field, p.path)
+				fe.Segments[0].Name = p.name
 				break
 			}
 		}
@@ -374,7 +375,7 @@ func LoadPaths(src source.Source) (Paths, error) {
 
 	nameHost := "PATHS_HOST"
 	if v, ok, err := src.Lookup(source.Key{Env: "PATHS_HOST", File: []string{"paths", "host"}, Flag: "paths-host"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameHost = v.Name
 		x.Host = v.Text
@@ -382,7 +383,7 @@ func LoadPaths(src source.Source) (Paths, error) {
 
 	nameHostName := "PATHS_HOST_NAME"
 	if v, ok, err := src.Lookup(source.Key{Env: "PATHS_HOST_NAME", File: []string{"paths", "host_name"}, Flag: "paths-host-name"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameHostName = v.Name
 		x.HostName = v.Text
@@ -390,7 +391,7 @@ func LoadPaths(src source.Source) (Paths, error) {
 
 	keys := []string{"host", "host_name"}
 	for _, v := range src.Unknown("paths", keys) {
-		errs.Add(v.Name, source.UnknownKey(v.Name, "paths", keys))
+		errs.Add(validator.Field(v.Name), source.UnknownKey(v.Name, "paths", keys))
 	}
 
 	if len(errs) > 0 {
@@ -401,11 +402,12 @@ func LoadPaths(src source.Source) (Paths, error) {
 	x.validate(&hook)
 	for _, fe := range hook {
 		for _, p := range []struct{ path, name string }{
-			{"host.name", nameHostName},
 			{"host", nameHost},
+			{"host.name", nameHostName},
 		} {
-			if rest, ok := strings.CutPrefix(fe.Field, p.path); ok && (rest == "" || rest[0] == '.' || rest[0] == '[') {
-				fe.Field = p.name + rest
+			if len(fe.Segments) > 0 && fe.Segments[0] == (validator.Segment{Kind: validator.FieldSegment, Name: p.path}) {
+				fe.Field = p.name + strings.TrimPrefix(fe.Field, p.path)
+				fe.Segments[0].Name = p.name
 				break
 			}
 		}
@@ -438,11 +440,11 @@ func LoadLimits(src source.Source) (Limits, error) {
 	x.Floor = math.Inf(-1)
 	nameFloor := "LIMITS_FLOOR"
 	if v, ok, err := src.Lookup(source.Key{Env: "LIMITS_FLOOR", File: []string{"limits", "floor"}, Flag: "limits-floor"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameFloor = v.Name
 		if n, err := strconv.ParseFloat(v.Text, 64); err != nil {
-			errs.Add(nameFloor, validator.FailWith("invalid", map[string]any{"type": "float64"}))
+			errs.Add(validator.Field(nameFloor), validator.FailWith("invalid", map[string]any{"type": "float64"}))
 		} else {
 			x.Floor = n
 		}
@@ -451,11 +453,11 @@ func LoadLimits(src source.Source) (Limits, error) {
 	x.Ceiling = float32(math.Inf(1))
 	nameCeiling := "LIMITS_CEILING"
 	if v, ok, err := src.Lookup(source.Key{Env: "LIMITS_CEILING", File: []string{"limits", "ceiling"}, Flag: "limits-ceiling"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameCeiling = v.Name
 		if n, err := strconv.ParseFloat(v.Text, 32); err != nil {
-			errs.Add(nameCeiling, validator.FailWith("invalid", map[string]any{"type": "float32"}))
+			errs.Add(validator.Field(nameCeiling), validator.FailWith("invalid", map[string]any{"type": "float32"}))
 		} else {
 			x.Ceiling = float32(n)
 		}
@@ -464,11 +466,11 @@ func LoadLimits(src source.Source) (Limits, error) {
 	x.Scale = Factor(math.NaN())
 	nameScale := "LIMITS_SCALE"
 	if v, ok, err := src.Lookup(source.Key{Env: "LIMITS_SCALE", File: []string{"limits", "scale"}, Flag: "limits-scale"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameScale = v.Name
 		if n, err := strconv.ParseFloat(v.Text, 64); err != nil {
-			errs.Add(nameScale, validator.FailWith("invalid", map[string]any{"type": "Factor"}))
+			errs.Add(validator.Field(nameScale), validator.FailWith("invalid", map[string]any{"type": "Factor"}))
 		} else {
 			x.Scale = Factor(n)
 		}
@@ -476,7 +478,7 @@ func LoadLimits(src source.Source) (Limits, error) {
 
 	keys := []string{"ceiling", "floor", "scale"}
 	for _, v := range src.Unknown("limits", keys) {
-		errs.Add(v.Name, source.UnknownKey(v.Name, "limits", keys))
+		errs.Add(validator.Field(v.Name), source.UnknownKey(v.Name, "limits", keys))
 	}
 
 	if len(errs) > 0 {
@@ -484,7 +486,7 @@ func LoadLimits(src source.Source) (Limits, error) {
 	}
 
 	if !(x.Floor <= 0) {
-		errs.Add(nameFloor, validator.LessThanOrEqualTo[float64](0))
+		errs.Add(validator.Field(nameFloor), validator.LessThanOrEqualTo[float64](0))
 	}
 
 	if len(errs) > 0 {
@@ -512,11 +514,11 @@ func LoadUpload(src source.Source) (Upload, error) {
 	x.DirMode = 0755
 	nameDirMode := "UPLOAD_DIR_MODE"
 	if v, ok, err := src.Lookup(source.Key{Env: "UPLOAD_DIR_MODE", File: []string{"upload", "dir_mode"}, Flag: "upload-dir-mode"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameDirMode = v.Name
 		if n, err := strconv.ParseUint(v.Text, 0, 32); err != nil {
-			errs.Add(nameDirMode, validator.FailWith("invalid", map[string]any{"type": "fs.FileMode"}))
+			errs.Add(validator.Field(nameDirMode), validator.FailWith("invalid", map[string]any{"type": "fs.FileMode"}))
 		} else {
 			x.DirMode = fs.FileMode(n)
 		}
@@ -525,11 +527,11 @@ func LoadUpload(src source.Source) (Upload, error) {
 	x.Offset = -0x10
 	nameOffset := "UPLOAD_OFFSET"
 	if v, ok, err := src.Lookup(source.Key{Env: "UPLOAD_OFFSET", File: []string{"upload", "offset"}, Flag: "upload-offset"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameOffset = v.Name
 		if n, err := strconv.ParseInt(v.Text, 0, 16); err != nil {
-			errs.Add(nameOffset, validator.FailWith("invalid", map[string]any{"type": "int16"}))
+			errs.Add(validator.Field(nameOffset), validator.FailWith("invalid", map[string]any{"type": "int16"}))
 		} else {
 			x.Offset = int16(n)
 		}
@@ -537,7 +539,7 @@ func LoadUpload(src source.Source) (Upload, error) {
 
 	keys := []string{"dir_mode", "offset"}
 	for _, v := range src.Unknown("upload", keys) {
-		errs.Add(v.Name, source.UnknownKey(v.Name, "upload", keys))
+		errs.Add(validator.Field(v.Name), source.UnknownKey(v.Name, "upload", keys))
 	}
 
 	if len(errs) > 0 {
@@ -565,19 +567,19 @@ func LoadFallback(src source.Source) (Fallback, error) {
 
 	nameLevel := "FALLBACK_LEVEL"
 	if v, ok, err := src.Lookup(source.Key{Env: "FALLBACK_LEVEL", File: []string{"fallback", "level"}, Flag: "fallback-level"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameLevel = v.Name
 		var u slog.Level
 		if err := u.UnmarshalText([]byte(v.Text)); err != nil {
-			errs.Add(nameLevel, source.Coded(err, "slog.Level"))
+			errs.Add(validator.Field(nameLevel), source.Coded(err, "slog.Level"))
 		} else {
 			x.Level = u
 		}
 	} else {
 		var u slog.Level
 		if err := u.UnmarshalText([]byte("loud")); err != nil {
-			errs.Add(nameLevel, source.Default(source.Coded(err, "slog.Level")))
+			errs.Add(validator.Field(nameLevel), source.Default(source.Coded(err, "slog.Level")))
 		} else {
 			x.Level = u
 		}
@@ -585,17 +587,17 @@ func LoadFallback(src source.Source) (Fallback, error) {
 
 	nameAdmin := "FALLBACK_ADMIN"
 	if v, ok, err := src.Lookup(source.Key{Env: "FALLBACK_ADMIN", File: []string{"fallback", "admin"}, Flag: "fallback-admin"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		nameAdmin = v.Name
 		if o, err := NewEmail(v.Text); err != nil {
-			errs.Add(nameAdmin, source.Coded(err, "Email"))
+			errs.Add(validator.Field(nameAdmin), source.Coded(err, "Email"))
 		} else {
 			x.Admin = o
 		}
 	} else {
 		if o, err := NewEmail("ops"); err != nil {
-			errs.Add(nameAdmin, source.Default(source.Coded(err, "Email")))
+			errs.Add(validator.Field(nameAdmin), source.Default(source.Coded(err, "Email")))
 		} else {
 			x.Admin = o
 		}
@@ -603,21 +605,21 @@ func LoadFallback(src source.Source) (Fallback, error) {
 
 	namePublic := "FALLBACK_PUBLIC"
 	if v, ok, err := src.Lookup(source.Key{Env: "FALLBACK_PUBLIC", File: []string{"fallback", "public"}, Flag: "fallback-public"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		namePublic = v.Name
 		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
-			errs.Add(namePublic, validator.FailWith("invalid", map[string]any{"type": "Port"}))
+			errs.Add(validator.Field(namePublic), validator.FailWith("invalid", map[string]any{"type": "Port"}))
 		} else if o, err := NewPort(int(n)); err != nil {
-			errs.Add(namePublic, source.Coded(err, "Port"))
+			errs.Add(validator.Field(namePublic), source.Coded(err, "Port"))
 		} else {
 			x.Public = o
 		}
 	} else {
 		if n, err := strconv.ParseInt("port", 0, 0); err != nil {
-			errs.Add(namePublic, source.Default(validator.FailWith("invalid", map[string]any{"type": "Port"})))
+			errs.Add(validator.Field(namePublic), source.Default(validator.FailWith("invalid", map[string]any{"type": "Port"})))
 		} else if o, err := NewPort(int(n)); err != nil {
-			errs.Add(namePublic, source.Default(source.Coded(err, "Port")))
+			errs.Add(validator.Field(namePublic), source.Default(source.Coded(err, "Port")))
 		} else {
 			x.Public = o
 		}
@@ -625,7 +627,7 @@ func LoadFallback(src source.Source) (Fallback, error) {
 
 	keys := []string{"admin", "level", "public"}
 	for _, v := range src.Unknown("fallback", keys) {
-		errs.Add(v.Name, source.UnknownKey(v.Name, "fallback", keys))
+		errs.Add(validator.Field(v.Name), source.UnknownKey(v.Name, "fallback", keys))
 	}
 
 	if len(errs) > 0 {
@@ -650,14 +652,14 @@ func LoadReplica(src source.Source) (Replica, error) {
 	)
 
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_REPLICA_URL", File: []string{"database", "replica_url"}, Flag: "database-replica-url"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		x.ReplicaURL = v.Text
 	}
 
 	keys := []string{"admin_url", "debug", "dial_timeout", "pool_max_conns", "ratio", "replica_url", "retries", "writer_url"}
 	for _, v := range src.Unknown("database", keys) {
-		errs.Add(v.Name, source.UnknownKey(v.Name, "database", keys))
+		errs.Add(validator.Field(v.Name), source.UnknownKey(v.Name, "database", keys))
 	}
 
 	if len(errs) > 0 {

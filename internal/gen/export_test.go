@@ -33,18 +33,5 @@ func Targets(fset *token.FileSet, pkgs []*packages.Package) ([]string, []string)
 	return names, msgs
 }
 
-// LongestFirst orders the paths of fields as the hook looks them up.
-func LongestFirst(paths []string) []string {
-	fields := make([]field, len(paths))
-	for i, p := range paths {
-		fields[i].path = p
-	}
-	ordered := make([]string, 0, len(paths))
-	for _, f := range longestFirst(fields) {
-		ordered = append(ordered, f.path)
-	}
-	return ordered
-}
-
 // SnakeHint says how to write text in snake case, in the place of %s in format.
 var SnakeHint = snakeHint

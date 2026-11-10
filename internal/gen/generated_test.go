@@ -1,6 +1,7 @@
 package gen_test
 
 import (
+	"errors"
 	"flag"
 	"io/fs"
 	"log/slog"
@@ -8,8 +9,11 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
+
+	"github.com/go-kanna/validator"
 
 	"github.com/go-kanna/config/internal/gen/testdata/emit"
 	"github.com/go-kanna/config/source"
@@ -259,9 +263,35 @@ func TestGenerated_Hook(t *testing.T) {
 	}
 }
 
-// What the hook reports goes under the field whose JSON name is the longest
-// the path begins with, not under the first declared.
-func TestGenerated_HookLongestPath(t *testing.T) {
+// The hook's errors move under the name of the setting in their segments too, as
+// one segment however the name is spelled, so that Field and Segments agree.
+func TestGenerated_HookSegments(t *testing.T) {
+	clearEnv(t)
+	t.Setenv("API_NAME", "app")
+
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if err := os.WriteFile(path, []byte(`{"api": {"alias": "app"}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	src, err := source.Open(source.Sources{Files: []source.File{{Path: path, Decode: source.JSON}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = emit.LoadAPI(src)
+	errs, ok := errors.AsType[validator.Errors](err)
+	if !ok || len(errs) != 1 {
+		t.Fatalf("LoadAPI error = %v, want one error", err)
+	}
+	want := []validator.Segment{{Kind: validator.FieldSegment, Name: "api.alias"}}
+	if fe := errs[0]; fe.Field != "api.alias" || !slices.Equal(fe.Segments, want) {
+		t.Errorf("LoadAPI error at %q %+v, want %q %+v", fe.Field, fe.Segments, "api.alias", want)
+	}
+}
+
+// What the hook reports goes under the field whose JSON name is its first
+// segment, even when another's JSON name begins with it.
+func TestGenerated_HookFirstSegment(t *testing.T) {
 	clearEnv(t)
 	t.Setenv("PATHS_HOST_NAME", "-")
 

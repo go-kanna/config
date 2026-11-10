@@ -57,11 +57,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	x.PoolMaxConns = 10
 	namePoolMaxConns := "DATABASE_POOL_MAX_CONNS"
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_POOL_MAX_CONNS", File: []string{"database", "pool_max_conns"}, Flag: "database-pool-max-conns"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		namePoolMaxConns = v.Name
 		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
-			errs.Add(namePoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
+			errs.Add(validator.Field(namePoolMaxConns), validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
@@ -74,11 +74,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	}
 
 	if x.WriterURL == "" {
-		errs.Add(nameWriterURL, validator.Blank())
+		errs.Add(validator.Field(nameWriterURL), validator.Blank())
 	}
 
 	if x.PoolMaxConns < 1 {
-		errs.Add(namePoolMaxConns, validator.GreaterThanOrEqualTo[int32](1))
+		errs.Add(validator.Field(namePoolMaxConns), validator.GreaterThanOrEqualTo[int32](1))
 	}
 
 	if len(errs) > 0 {
@@ -228,7 +228,7 @@ type CORS struct {
 }
 ```
 
-`dive` が各 origin を確かめ、2 つ目が長すぎれば `CORS_ALLOWED_ORIGINS[1]: too_long (count=20)` と報告します。
+`dive` が各 origin を確かめ、2 つ目が長すぎれば `CORS_ALLOWED_ORIGINS[1]: too_long (count=20)` と報告します。リスト自体に書いた `min`、`max`、`len` は要素の数を数え、文字列の `too_short`、`too_long`、`wrong_length` ではなく、`too_few`、`too_many`、`wrong_count` を報告します。
 
 読めなかった誤りは、値ではなく、コードとパラメータで報告します。設定は秘密を持ちうるからです。読めない数、bool、時間は、型を付けた `invalid` です（`DATABASE_POOL_MAX_CONNS: invalid (type=int32)`）。コンストラクタや `UnmarshalText` が返した誤りは、kanna-value のルールのようにコードを持てばそのまま返し、持たなければ型を付けた `invalid` にします。`slog.Level` の誤りは値を含むからです。コードがあっても値を含むことはあるので、コードとパラメータに何を入れるかは、その型を書いた人の責任です。`type` パラメータは、ログや構造化された誤りのためのもので、翻訳の文言で表示できるとは約束しません。実行時に読む既定値が読めなかったときは、既定値のテキストではなく `default=true` のパラメータも付けます（`SERVER_LEVEL: invalid (default=true, type=slog.Level)`）。既定値が破ったルールの誤りには付けません。
 
@@ -243,7 +243,7 @@ type CORS struct {
 
 読めなかった設定のフィールドは、読んだ値を持ちません。そのままルールを確かめると、フィールドをまたぐルールやフックが、欠けた値を見て誤りを報告しかねないからです。
 
-誤りは、その設定をした場所での名前の下に置きます。環境変数、`database.pool_max_conns`、`-database-pool-max-conns` のいずれかで、どこにも設定されていなければ環境変数の名前です。フィールドの型自身の `Validate` が返す誤りは、その名前の下に残ります（`DATABASE_PRIMARY.host`）。フックは kanna-validator と同じく、フィールドを JSON の名前（なければ Go の名前）で名指します。kanna-config は、フックのパスを生成時に確かめ、フックが返した誤りを、フィールドの設定の名前の下に移します。パスのうち、フィールドの名前より後ろはそのまま残します。構造体全体の誤りは `base` のままです。
+誤りは、その設定をした場所での名前の下に置きます。環境変数、`database.pool_max_conns`、`-database-pool-max-conns` のいずれかで、どこにも設定されていなければ環境変数の名前です。名前は、どう綴られていても、パスの `Segments` の 1 つのフィールドの区切りで、`database.pool_max_conns` は入れ子を表しません。フィールドの型自身の `Validate` が返す誤りは、その名前の下に残ります（`DATABASE_PRIMARY.host`）。フックは kanna-validator と同じく、フィールドを `validator.Field` と JSON の名前（なければ Go の名前）で名指します。kanna-config は、フックのパスを生成時に確かめ、フックが返した誤りを、`Field` でも `Segments` でも、フィールドの設定の名前の下に移します。パスのうち、フィールドの名前より後ろはそのまま残します。構造体全体の誤りは `base` のままです。
 
 コード付きにするのは、読むときの誤りだけです。ルールが返した誤りは、kanna-validator と同じくそのまま返します。同じルールが `LoadX` と `Validate` で同じ誤りを返すようにするためです。誤りに値を含めないのは、ルールを書いた人の責任です。kanna-value の `rule.Fail` と `validator.Fail` は値を含めません。
 

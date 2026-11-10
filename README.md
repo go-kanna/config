@@ -59,11 +59,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	x.PoolMaxConns = 10
 	namePoolMaxConns := "DATABASE_POOL_MAX_CONNS"
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_POOL_MAX_CONNS", File: []string{"database", "pool_max_conns"}, Flag: "database-pool-max-conns"}); err != nil {
-		errs.Add(v.Name, err)
+		errs.Add(validator.Field(v.Name), err)
 	} else if ok {
 		namePoolMaxConns = v.Name
 		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
-			errs.Add(namePoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
+			errs.Add(validator.Field(namePoolMaxConns), validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
@@ -76,11 +76,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	}
 
 	if x.WriterURL == "" {
-		errs.Add(nameWriterURL, validator.Blank())
+		errs.Add(validator.Field(nameWriterURL), validator.Blank())
 	}
 
 	if x.PoolMaxConns < 1 {
-		errs.Add(namePoolMaxConns, validator.GreaterThanOrEqualTo[int32](1))
+		errs.Add(validator.Field(namePoolMaxConns), validator.GreaterThanOrEqualTo[int32](1))
 	}
 
 	if len(errs) > 0 {
@@ -238,7 +238,7 @@ type CORS struct {
 }
 ```
 
-Here `dive` checks each origin, and a long second one is reported as `CORS_ALLOWED_ORIGINS[1]: too_long (count=20)`.
+Here `dive` checks each origin, and a long second one is reported as `CORS_ALLOWED_ORIGINS[1]: too_long (count=20)`. A `min`, `max`, or `len` on the list itself counts its elements, and reports `too_few`, `too_many`, or `wrong_count`, not the `too_short`, `too_long`, or `wrong_length` of a string.
 
 What cannot be read is reported by a code and its params, never by the value, which a setting may keep secret: a number, a bool, or a duration that does not read is `invalid` with the type, as in `DATABASE_POOL_MAX_CONNS: invalid (type=int32)`. What a constructor or an `UnmarshalText` returns is kept when it has a code, as the rules of kanna-value do, and otherwise is `invalid` with the type: the error of `slog.Level` holds the value. Having a code is no proof of holding no value; what a code and its params say is up to whoever writes the type. The `type` param is there for a log or a structured error, and no promise of a placeholder a translation can show. A default that cannot be read when the program runs gets the param `default=true` besides, and not its text, as in `SERVER_LEVEL: invalid (default=true, type=slog.Level)`; the rules it breaks get none.
 
@@ -253,7 +253,7 @@ The `validate` tags mean what they mean to kanna-validator, and `LoadX` checks t
 
 A setting that cannot be read leaves its field without the value read, and checking the rules then could report a rule across fields, or the hook, that the value it lacks breaks.
 
-An error goes under the name of the setting where it was set: the variable, `database.pool_max_conns`, or `-database-pool-max-conns`. A setting given nowhere goes under its variable. What a field's own `Validate` reports stays under that name, as `DATABASE_PRIMARY.host`. The hook names a field as kanna-validator does, by its JSON name, or else its Go name. kanna-config checks the hook's paths on generating, and moves what the hook reports under the name of the field's setting, keeping what follows. An error on the struct as a whole stays under `base`.
+An error goes under the name of the setting where it was set: the variable, `database.pool_max_conns`, or `-database-pool-max-conns`. A setting given nowhere goes under its variable. The name is one field segment of the path in `Segments`, however it is spelled, so that `database.pool_max_conns` nests nothing. What a field's own `Validate` reports stays under that name, as `DATABASE_PRIMARY.host`. The hook names a field as kanna-validator does, by `validator.Field` with its JSON name, or else its Go name. kanna-config checks the hook's paths on generating, and moves what the hook reports under the name of the field's setting, in `Field` and `Segments` alike, keeping what follows. An error on the struct as a whole stays under `base`.
 
 Only reading turns an error into a code. What a rule returns is returned as it is, as in kanna-validator, so that one rule reports the same in `LoadX` and in `Validate`: keeping a value out of an error is up to whoever writes the rule, and `rule.Fail` of kanna-value and `validator.Fail` keep it out.
 
