@@ -122,7 +122,7 @@ validator: DATABASE_WRITER_URL: blank; database.pool_max_conns: greater_than_or_
 | `Database.PoolMaxConns` | `DATABASE_POOL_MAX_CONNS` | セクション `database` の `pool_max_conns` | `-database-pool-max-conns` |
 | `API.Port` | `API_PORT` | セクション `api` の `port` | `-api-port` |
 
-構造体の語で、構造体ごとに設定を分けられます。`postgres.Config` と `redis.Config` のように名前が同じ構造体は、同じ設定を読みます。共有を意図することもあるので、止めません。
+構造体の語で、構造体ごとに設定を分けられます。2 つの構造体のフィールドで、名前がすべて一致するものは 1 つの設定を読みます。共有を意図することもあるので、止めません。たとえば、`postgres.Config` と `redis.Config` のように名前が同じ構造体は、どちらも `CONFIG_HOST` を読み、両方のフラグを 1 つの `FlagSet` に定義すると、`-config-host` は 1 回だけ定義されます。同じパッケージの 2 つの構造体のフィールドで、名前が一部だけ一致するものは、生成を止めます。`Database.WriterURL` と `DatabaseWriter.URL` は、`DATABASE_WRITER_URL` と `-database-writer-url` を共有しますが、ファイルのキーは別々です。`App.Log` と `AppLog.File`（`APP_LOG_FILE`）のように、あるフィールドの変数がほかの構造体のフィールドの変数のファイルを名指すときも、生成を止めます。kanna-config が比べるのは 1 つのパッケージの構造体どうしで、別のパッケージの構造体とは比べません。
 
 名前は、デプロイの側が決める外の名前です。構造体の語がそれと違うときは、`prefix=` に snake case で書きます。たとえば、`OAuth` という名前の構造体は `o_auth` に分かれ、`Config` という名前の構造体の語 `config` は、何の設定かを表しません:
 

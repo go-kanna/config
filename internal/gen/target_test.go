@@ -170,6 +170,29 @@ func TestTargets_StructDiagnostics(t *testing.T) {
 			want: "strict",
 		},
 		{
+			name: "two structs agreeing on some names",
+			src: "package test\n\n//kanna:config\ntype Database struct{ WriterURL string }\n\n" +
+				"//kanna:config\ntype DatabaseWriter struct{ URL string }\n",
+			want: "test.go:7:29: error: DatabaseWriter.URL reads the variable DATABASE_WRITER_URL and the flag " +
+				"-database-writer-url that Database.WriterURL reads too, but the key database_writer.url " +
+				"where it reads the key database.writer_url (field URL)\n" +
+				`  give the two the same names to share the setting, or names of their own, with prefix=, config:"…", or env:"…"`,
+		},
+		{
+			name: "a variable naming the file of another struct's",
+			src: "package test\n\n//kanna:config\ntype App struct{ Log string }\n\n" +
+				"//kanna:config\ntype AppLog struct{ File string }\n",
+			want: "AppLog.File reads the variable APP_LOG_FILE, which names the file of " +
+				"the variable APP_LOG that App.Log reads (field File)",
+		},
+		{
+			name: "a variable naming the file of a later struct's",
+			src: "package test\n\n//kanna:config\ntype AppLog struct{ File string }\n\n" +
+				"//kanna:config\ntype App struct{ Log string }\n",
+			want: "AppLog.File reads the variable APP_LOG_FILE, which names the file of " +
+				"the variable APP_LOG that App.Log reads (field File)",
+		},
+		{
 			name: "generic",
 			src:  "package test\n\n//kanna:config\ntype Box[T any] struct{ V T }\n",
 			want: "test.go:4:6: error: generic struct Box is not supported",
@@ -180,10 +203,7 @@ func TestTargets_StructDiagnostics(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			names, diags := targets(t, tt.src)
-			if len(names) > 0 {
-				t.Errorf("targets = %q, want none", names)
-			}
+			_, diags := targets(t, tt.src)
 			if !slices.ContainsFunc(diags, func(d string) bool { return strings.Contains(d, tt.want) }) {
 				t.Errorf("diagnostics = %q, want one containing %q", diags, tt.want)
 			}
@@ -213,8 +233,13 @@ func (Level) IsZero() bool { return false }
 
 //kanna:config
 type Empty struct{}
+
+// DB reads the setting Settings.Port reads, as sharing it may be meant.
+//
+//kanna:config prefix=settings
+type DB struct{ Port int }
 `)
-	if want := []string{"Settings", "Empty"}; !slices.Equal(names, want) || len(diags) > 0 {
+	if want := []string{"Settings", "Empty", "DB"}; !slices.Equal(names, want) || len(diags) > 0 {
 		t.Errorf("targets = %q, diagnostics = %q, want %q and none", names, diags, want)
 	}
 }

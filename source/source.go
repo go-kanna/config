@@ -210,8 +210,13 @@ func scalar(v any) (string, error) {
 
 // DefineFlag defines on fs the flag name, whose text a Source opened with fs
 // finds. usage says what it sets, def is the default the flag's help shows,
-// and a bool flag may stand alone, as -debug does for -debug=true.
+// and a bool flag may stand alone, as -debug does for -debug=true. A flag fs
+// defines already is left as it is, so that two structs reading one setting
+// share its flag.
 func DefineFlag(fs *flag.FlagSet, name, usage, def string, isBool bool) {
+	if fs.Lookup(name) != nil {
+		return
+	}
 	fs.Var(&flagValue{text: def, isBool: isBool}, name, usage)
 }
 
