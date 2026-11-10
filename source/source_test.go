@@ -111,6 +111,16 @@ func TestLookup_FlagsWinOverTheEnvironment(t *testing.T) {
 	}
 }
 
+func TestOpen_FlagsNotParsed(t *testing.T) {
+	t.Parallel()
+
+	fs := flag.NewFlagSet("app", flag.ContinueOnError)
+	source.DefineFlag(fs, "database-writer-url", "Database.WriterURL", "", false)
+	if _, err := source.Open(source.Sources{Flags: fs}); err == nil || !strings.Contains(err.Error(), "not parsed") {
+		t.Errorf("Open error = %v, want one saying the flags are not parsed", err)
+	}
+}
+
 func TestLookup_TheEnvironmentWinsOverFiles(t *testing.T) {
 	t.Setenv("DATABASE_WRITER_URL", "postgres://env@db/app")
 

@@ -143,7 +143,7 @@ type OAuth struct {
 
 環境変数には、値の代わりに、値を持つファイルのパスを渡せます。Kubernetes が Secret をマウントする形です。`DATABASE_PASSWORD_FILE` は、そのファイルの中身から末尾の改行を 1 つ除いたものを `DATABASE_PASSWORD` の値にします。両方を設定すると、誤りとして読むのを止めます。
 
-フラグは `flag` パッケージのもので、`DefineXFlags` がプログラムのパースする `FlagSet` に定義します。使うのは設定されたフラグだけです。bool のフラグは `-database-debug` のように単独で書けます。
+フラグは `flag` パッケージのもので、`DefineXFlags` がプログラムのパースする `FlagSet` に定義します。`source.Open` の前にパースしてください。まだパースしていない `FlagSet` は `source.Open` が誤りにします。使うのは設定されたフラグだけです。bool のフラグは `-database-debug` のように単独で書けます。
 
 ## ファイル
 

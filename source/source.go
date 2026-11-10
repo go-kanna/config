@@ -48,8 +48,9 @@ type Source interface {
 // Sources are where settings are read from besides the environment, which is
 // always read.
 type Sources struct {
-	// Flags are the flags parsed, of which those set count. The code
-	// kanna-config generates defines a struct's flags with DefineFlag.
+	// Flags are the flags parsed, of which those set count, and a FlagSet not
+	// parsed yet is an error. The code kanna-config generates defines a
+	// struct's flags with DefineFlag.
 	Flags *flag.FlagSet
 
 	// Files are read in order, so that a later file wins over an earlier one.
@@ -72,6 +73,9 @@ type File struct {
 func Open(s Sources) (Source, error) {
 	src := &sources{}
 	if s.Flags != nil {
+		if !s.Flags.Parsed() {
+			return nil, errors.New("read settings: the flags are not parsed; call Parse on the FlagSet before Open")
+		}
 		src.flags = make(map[string]string)
 		s.Flags.Visit(func(f *flag.Flag) { src.flags[f.Name] = f.Value.String() })
 	}

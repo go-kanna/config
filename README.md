@@ -143,7 +143,7 @@ A setting is looked for in the flags, then in the environment, then in the files
 
 A variable may hold, rather than the value, the path of a file holding it, as Kubernetes mounts a secret: `DATABASE_PASSWORD_FILE` gives `DATABASE_PASSWORD` the content of that file, less one line ending at its end. Both set stop the read with an error.
 
-Flags are those of the `flag` package, defined by `DefineXFlags` on a `FlagSet` the program parses; only the flags set count. A bool flag may stand alone, as `-database-debug`.
+Flags are those of the `flag` package, defined by `DefineXFlags` on a `FlagSet` the program parses before `source.Open`, which rejects one not parsed yet; only the flags set count. A bool flag may stand alone, as `-database-debug`.
 
 ## Files
 
