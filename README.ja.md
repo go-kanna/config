@@ -305,6 +305,8 @@ $ go generate ./...
 warning: no struct is marked //kanna:config in example.com/app/config
 ```
 
+構造体の型でないもの（`type Level string`、型の別名、インターフェース、関数など）に付けたディレクティブは、読まれることがないのでエラーです。
+
 ## サンプル
 
 [`example`](example) は、サーバーの設定を、YAML のファイル、TOML のファイル、環境変数、フラグから読み、それぞれが与えるものと、読めない設定やルールに反する設定の誤りを表示します。CI はこれを再生成し、出力が変わる場合は失敗します。

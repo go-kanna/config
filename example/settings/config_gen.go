@@ -20,8 +20,9 @@ func DefineServerFlags(fs *flag.FlagSet) {
 }
 
 // LoadServer reads Server from src, and checks it by its validate tags.
-// It returns the validator.Errors of each setting it cannot read, or else of
-// each rule the settings break, under the name each goes by where it is set.
+// It returns the validator.Errors of each setting it cannot read and of each
+// key in its section of a file that no field reads, or else of each rule
+// the settings break, under the name each goes by where it is set.
 func LoadServer(src source.Source) (Server, error) {
 	var (
 		x    Server
@@ -103,8 +104,9 @@ func DefineDatabaseFlags(fs *flag.FlagSet) {
 }
 
 // LoadDatabase reads Database from src, and checks it by its validate tags.
-// It returns the validator.Errors of each setting it cannot read, or else of
-// each rule the settings break, under the name each goes by where it is set.
+// It returns the validator.Errors of each setting it cannot read and of each
+// key in its section of a file that no field reads, or else of each rule
+// the settings break, under the name each goes by where it is set.
 func LoadDatabase(src source.Source) (Database, error) {
 	var (
 		x    Database

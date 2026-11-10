@@ -28,8 +28,9 @@ func DefineDatabaseFlags(fs2 *flag.FlagSet) {
 }
 
 // LoadDatabase reads Database from src, and checks it by its validate tags.
-// It returns the validator.Errors of each setting it cannot read, or else of
-// each rule the settings break, under the name each goes by where it is set.
+// It returns the validator.Errors of each setting it cannot read and of each
+// key in its section of a file that no field reads, or else of each rule
+// the settings break, under the name each goes by where it is set.
 func LoadDatabase(src source.Source) (Database, error) {
 	var (
 		x    Database
@@ -143,8 +144,9 @@ func DefineOAuthFlags(fs2 *flag.FlagSet) {
 }
 
 // LoadOAuth reads OAuth from src, and checks it by its validate tags.
-// It returns the validator.Errors of each setting it cannot read, or else of
-// each rule the settings break, under the name each goes by where it is set.
+// It returns the validator.Errors of each setting it cannot read and of each
+// key in its section of a file that no field reads, or else of each rule
+// the settings break, under the name each goes by where it is set.
 func LoadOAuth(src source.Source) (OAuth, error) {
 	var (
 		x    OAuth
@@ -197,8 +199,9 @@ func DefineAPIFlags(fs2 *flag.FlagSet) {
 }
 
 // LoadAPI reads API from src, and checks it by its validate tags.
-// It returns the validator.Errors of each setting it cannot read, or else of
-// each rule the settings break, under the name each goes by where it is set.
+// It returns the validator.Errors of each setting it cannot read and of each
+// key in its section of a file that no field reads, or else of each rule
+// the settings break, under the name each goes by where it is set.
 func LoadAPI(src source.Source) (API, error) {
 	var (
 		x    API
@@ -360,8 +363,9 @@ func DefinePathsFlags(fs2 *flag.FlagSet) {
 }
 
 // LoadPaths reads Paths from src, and checks it by its validate tags.
-// It returns the validator.Errors of each setting it cannot read, or else of
-// each rule the settings break, under the name each goes by where it is set.
+// It returns the validator.Errors of each setting it cannot read and of each
+// key in its section of a file that no field reads, or else of each rule
+// the settings break, under the name each goes by where it is set.
 func LoadPaths(src source.Source) (Paths, error) {
 	var (
 		x    Paths
@@ -422,8 +426,9 @@ func DefineLimitsFlags(fs2 *flag.FlagSet) {
 }
 
 // LoadLimits reads Limits from src, and checks it by its validate tags.
-// It returns the validator.Errors of each setting it cannot read, or else of
-// each rule the settings break, under the name each goes by where it is set.
+// It returns the validator.Errors of each setting it cannot read and of each
+// key in its section of a file that no field reads, or else of each rule
+// the settings break, under the name each goes by where it is set.
 func LoadLimits(src source.Source) (Limits, error) {
 	var (
 		x    Limits
@@ -495,8 +500,9 @@ func DefineUploadFlags(fs2 *flag.FlagSet) {
 }
 
 // LoadUpload reads Upload from src, and checks it by its validate tags.
-// It returns the validator.Errors of each setting it cannot read, or else of
-// each rule the settings break, under the name each goes by where it is set.
+// It returns the validator.Errors of each setting it cannot read and of each
+// key in its section of a file that no field reads, or else of each rule
+// the settings break, under the name each goes by where it is set.
 func LoadUpload(src source.Source) (Upload, error) {
 	var (
 		x    Upload
@@ -548,8 +554,9 @@ func DefineFallbackFlags(fs2 *flag.FlagSet) {
 }
 
 // LoadFallback reads Fallback from src, and checks it by its validate tags.
-// It returns the validator.Errors of each setting it cannot read, or else of
-// each rule the settings break, under the name each goes by where it is set.
+// It returns the validator.Errors of each setting it cannot read and of each
+// key in its section of a file that no field reads, or else of each rule
+// the settings break, under the name each goes by where it is set.
 func LoadFallback(src source.Source) (Fallback, error) {
 	var (
 		x    Fallback
@@ -633,8 +640,9 @@ func DefineReplicaFlags(fs2 *flag.FlagSet) {
 }
 
 // LoadReplica reads Replica from src, and checks it by its validate tags.
-// It returns the validator.Errors of each setting it cannot read, or else of
-// each rule the settings break, under the name each goes by where it is set.
+// It returns the validator.Errors of each setting it cannot read and of each
+// key in its section of a file that no field reads, or else of each rule
+// the settings break, under the name each goes by where it is set.
 func LoadReplica(src source.Source) (Replica, error) {
 	var (
 		x    Replica

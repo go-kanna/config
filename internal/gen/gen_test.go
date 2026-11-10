@@ -115,6 +115,32 @@ func TestCommand_DeclaredAlready(t *testing.T) {
 	}
 }
 
+func TestCommand_Misplaced(t *testing.T) {
+	t.Parallel()
+
+	dir := writeModule(t, map[string]string{"app.go": "package app\n\n" +
+		"//kanna:config\ntype Level string\n\n" +
+		"//kanna:config\ntype Alias = struct{ Port int }\n\n" +
+		"//kanna:config\ntype Source interface{ Port() int }\n\n" +
+		"//kanna:config\nfunc Load() {}\n\n" +
+		"//kanna:config\nvar Port int\n"})
+	code, stderr := run(t, dir)
+	want := "./app.go:3:1: error: //kanna:config marks a struct type, not a type other than a struct or an interface, " +
+		"so nothing reads it\n" +
+		"  write it right above a struct type\n" +
+		"./app.go:6:1: error: //kanna:config marks a struct type, not a type alias, so nothing reads it\n" +
+		"  write it right above a struct type\n" +
+		"./app.go:9:1: error: //kanna:config marks a struct type, not an interface type, so nothing reads it\n" +
+		"  write it right above a struct type\n" +
+		"./app.go:12:1: error: //kanna:config marks a struct type, not a function, so nothing reads it\n" +
+		"  write it right above a struct type\n" +
+		"./app.go:15:1: error: //kanna:config marks a struct type, not a variable, so nothing reads it\n" +
+		"  write it right above a struct type\n"
+	if code != cli.ExitFailure || stderr != want {
+		t.Errorf("run = %d, stderr:\n%s\nwant:\n%s", code, stderr, want)
+	}
+}
+
 func TestCommand_RemovesWhatIsGone(t *testing.T) {
 	t.Parallel()
 

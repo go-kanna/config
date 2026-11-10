@@ -319,6 +319,9 @@ $ go generate ./...
 warning: no struct is marked //kanna:config in example.com/app/config
 ```
 
+The directive on anything but a struct type, such as `type Level string`, a type alias, an interface, or a function, is
+an error, since nothing reads it there.
+
 ## Example
 
 [`example`](example) reads the settings of a server from a YAML file, a TOML file, the environment, and flags, and prints what each gives, and what is wrong with settings that cannot be read or break a rule. CI regenerates it and fails if the output changes.

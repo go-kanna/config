@@ -134,8 +134,9 @@ func (e *emitter) load(t target) {
 	rt := e.w.Runtime()
 
 	e.printf("// %s reads %s from %s, and checks it by its validate tags.\n", loadName(t), t.Name, l.in)
-	e.printf("// It returns the %s.Errors of each setting it cannot read, or else of\n", rt)
-	e.printf("// each rule the settings break, under the name each goes by where it is set.\n")
+	e.printf("// It returns the %s.Errors of each setting it cannot read and of each\n", rt)
+	e.printf("// key in its section of a file that no field reads, or else of each rule\n")
+	e.printf("// the settings break, under the name each goes by where it is set.\n")
 	e.printf("func %s(%s %s.Source) (%s, error) {\n", loadName(t), l.in, e.src, t.Name)
 	e.printf("var (\n%s %s\n%s %s.Errors\n)\n", l.x, t.Name, l.errs, rt)
 	for _, fd := range t.fields {

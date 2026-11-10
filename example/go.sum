@@ -6,8 +6,8 @@ github.com/go-kanna/config/toml v0.0.2 h1:WzNb1UYlm35Yb+YcuYskybalCvkZEafODaMF6l
 github.com/go-kanna/config/toml v0.0.2/go.mod h1:E5fMMct2u1jUEjaUU2/Et+r7aw6i6cg0s09d+fg05EM=
 github.com/go-kanna/config/yaml v0.0.3 h1:I3uktoVwd17/0itckWHciDHww2RMaJ0TY5saNIeecNo=
 github.com/go-kanna/config/yaml v0.0.3/go.mod h1:uNLVhcw9ZoEPkcWkrSQ7loFvUvaVJZOxZztypXWlz3A=
-github.com/go-kanna/internal v0.0.31 h1:IyNuEsXaljeOMQh2S1ibQMo3dD5UBGFMKTnHFFJf0NU=
-github.com/go-kanna/internal v0.0.31/go.mod h1:Df477EkeFmw5w4hFNoBGUZfZJfgKJnaemuReERxK7to=
+github.com/go-kanna/internal v0.0.32-0.20261110094330-760e419d549c h1:Cn6lgkAb12UFd2xxxe6I0ko7ti139VnHGHPT1aV0/qE=
+github.com/go-kanna/internal v0.0.32-0.20261110094330-760e419d549c/go.mod h1:Df477EkeFmw5w4hFNoBGUZfZJfgKJnaemuReERxK7to=
 github.com/go-kanna/validator v0.0.27 h1:Fy2mRujljGywn+2xwOx71Eh2YrNFB33K5+6doEoMMN0=
 github.com/go-kanna/validator v0.0.27/go.mod h1:gq44ZZ57PrqCi0qkYKlM1TrjwjRSzkTDDKL29DhIp+I=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
