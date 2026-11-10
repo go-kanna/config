@@ -33,13 +33,23 @@ type Key struct {
 }
 
 // Value is the text a setting is given, and the name it goes by where it is
-// found: the variable, the path in the file, or the flag.
+// found.
 type Value struct {
+	// Text is what the setting is given, which the code kanna-config generates
+	// reads as the text of a variable.
 	Text string
+
+	// Name is where Text was found: the variable (or NAME_FILE, when it was
+	// read from the file that names), the path in a file joined by dots, such
+	// as database.writer_url, or the flag with its dash, such as
+	// -database-writer-url. An error is reported under it.
 	Name string
 }
 
-// Source finds settings.
+// Source finds settings. The generated LoadX asks it for each setting through
+// Lookup alone, so a Source of your own, such as a fixed one in a test, may
+// take the place of what Open and Env return, and then decides for itself where
+// to look and in what order. It is not part of the order above.
 type Source interface {
 	// Lookup returns the text k is given where it is found first, and false
 	// when it is found nowhere. An error says why what is there cannot be
@@ -61,12 +71,19 @@ type Sources struct {
 
 // File is a file of settings.
 type File struct {
+	// Path is the file Open reads, and what an error names it by.
 	Path string
 
 	// Decode reads the file into its sections, such as JSON does. The modules
 	// github.com/go-kanna/config/yaml and github.com/go-kanna/config/toml
 	// read the other formats. Open returns its error as it is, which should
 	// say where the data is wrong, never what it holds, which may be a secret.
+	//
+	// A section is a map[string]any, and a value in it, a leaf, is nil (unset),
+	// a string, a bool, an int, an int64, a uint64, a float64, a time.Time
+	// (read as RFC 3339), or a fmt.Stringer (read as its String). A value of
+	// any other type, a list ([]any) or a section where a value goes included,
+	// is an error where the setting is read.
 	Decode func(data []byte) (map[string]any, error)
 }
 
@@ -228,7 +245,8 @@ func shape(v any) string {
 	return fmt.Sprintf("something of type %T", v)
 }
 
-// DefineFlag defines on fs the flag name, whose text a Source opened with fs
+// DefineFlag is for the generated DefineXFlags, not to be called by hand. It
+// defines on fs the flag name, whose text a Source opened with fs
 // finds. usage says what it sets, def is the default the flag's help shows,
 // and a bool flag may stand alone, as -debug does for -debug=true. A flag fs
 // defines already is left as it is, so that two structs reading one setting
@@ -263,9 +281,10 @@ func (v *flagValue) IsBoolFlag() bool {
 	return v.isBool
 }
 
-// Coded returns err, which a constructor or an UnmarshalText returned for the
-// text of a setting, when it carries a code, and otherwise invalid naming typ:
-// the text of err may hold the value, which a setting may keep secret.
+// Coded is for the generated LoadX, not to be called by hand. It returns err,
+// which a constructor or an UnmarshalText returned for the text of a setting,
+// when it carries a code, and otherwise invalid naming typ: the text of err may
+// hold the value, which a setting may keep secret.
 func Coded(err error, typ string) error {
 	if _, ok := errors.AsType[validator.Coded](err); ok {
 		return err
@@ -273,10 +292,11 @@ func Coded(err error, typ string) error {
 	return validator.FailWith("invalid", map[string]any{"type": typ})
 }
 
-// Default returns err, which reading the default of a setting returned, with
-// default=true added to its params, so that it tells a default that cannot be
-// read from a setting that cannot, without holding the default. errors.Is and
-// errors.As still reach err.
+// Default is for the generated LoadX, not to be called by hand. It returns err,
+// which reading the default of a setting returned, with default=true added to
+// its params, so that it tells a default that cannot be read from a setting
+// that cannot, without holding the default. errors.Is and errors.As still
+// reach err.
 func Default(err error) error {
 	c, ok := errors.AsType[validator.Coded](err)
 	if !ok {

@@ -15,10 +15,9 @@ kanna-config は、設定の構造体を、フラグ、環境変数、ファイ�
 
 ```sh
 go get -tool github.com/go-kanna/config/cmd/kanna-config
-go get github.com/go-kanna/config github.com/go-kanna/validator
 ```
 
-生成コードが import するのは、このモジュールの [`source`](source) パッケージ、go-kanna/validator のランタイム、読む [kanna-value](https://github.com/go-kanna/value) の型のコンストラクタです。YAML と TOML のファイルは、それぞれ別のモジュールが読みます。それを読むプログラムだけが require します:
+生成コードが import するのは、このモジュールの [`source`](source) パッケージ、go-kanna/validator のランタイム、読む [kanna-value](https://github.com/go-kanna/value) の型のコンストラクタです。ランタイムまでは、上のコマンドで依存に追加されます。YAML と TOML のファイルは、それぞれ別のモジュールが読みます。それを読むプログラムだけが require します:
 
 ```sh
 go get github.com/go-kanna/config/yaml   # or github.com/go-kanna/config/toml
@@ -139,7 +138,9 @@ type OAuth struct {
 
 ## 出どころ
 
-設定は、フラグ、環境変数、ファイル（後ろのものから）の順に探し、最初にテキストを持っていた出どころが値を決めます。空のテキストは、未設定と同じく何も決めません。環境変数のファイルに `DATABASE_POOL_MAX_CONNS=` と書いた行は、書かなかったのと同じです。
+設定は、フラグ、環境変数、ファイル（後ろのものから）の順に探し、最初にテキストを持っていた出どころが値を決めます。空のテキストは、未設定と同じく何も決めません。`DATABASE_POOL_MAX_CONNS=` と空で export した環境変数は、設定しなかったのと同じです。
+
+`.env` ファイルは読みません。環境変数はプロセスが持つものなので、`.env` を使うなら、`source.Open` の前に godotenv などで読み込むか、シェルや実行環境に export させてください。
 
 環境変数には、値の代わりに、値を持つファイルのパスを渡せます。Kubernetes が Secret をマウントする形です。`DATABASE_PASSWORD_FILE` は、そのファイルの中身から末尾の改行を 1 つ除いたものを `DATABASE_PASSWORD` の値にします。両方を設定すると、誤りとして読むのを止めます。
 
@@ -191,6 +192,8 @@ type Database struct {
 
 文字列、bool、数、`time.Duration`、kanna-value の enum の既定値は、生成時に読み、Go の値（`x.PoolMaxConns = 10`、整数は書いたとおりの `x.DirMode = 0755`、`x.DialTimeout = 5 * time.Second`、enum の定数）として書き出します。`NaN` と `+Inf` は定数で表せないので `math.NaN()` と `math.Inf(1)` で書き、ルールは読むときに確かめます。読めなければ生成を止めます。そのうえで、値だけで、プログラムのコードを動かさず、ほかのフィールドなしに判定できるルール（`required`、長さ、比較、`oneof`、`pattern`）で確かめます。拒否されれば生成を止めます。設定しない限り、起動のたびに失敗するからです。`rule=Type`、`eqfield`、`email`、`url`、`uuid`、フックは読むときに確かめます。`required` や `omitempty` が型の `IsZero` メソッドに聞くフィールドも、そのルールをすべて読むときに確かめます。kanna-value の値オブジェクトと `UnmarshalText` を持つ型の既定値は、設定と同じく、どこにも設定されていないときに読みます。
 
+`default` のない kanna-value の enum は、事実上必須です。どこにも設定されなければゼロ値のままで、enum の `Validate` が `inclusion` として拒否します。未設定を許すなら `validate:"omitempty"` を付けます。
+
 ## 読める型
 
 フィールドの型に最初に当てはまったもので読みます:
@@ -206,7 +209,24 @@ type Database struct {
 | 整数か、それを基にした型 | `strconv.ParseInt` か `strconv.ParseUint`（その大きさで）。Go のリテラルとして読むので、`0755` は 8 進数で、`0x1F`、`0o755`、`0b101`、`1_000` も読めます |
 | 浮動小数点数か、それを基にした型 | `strconv.ParseFloat`（その大きさで） |
 
-それ以外の型（ポインタ、スライス、マップ、構造体など）は、生成を止めます。カンマで区切ったリストなどは、`UnmarshalText` を持つ型を作って読みます。そのフィールドの `dive` は、要素を 1 つずつ確かめ、誤りを添字を付けた設定の名前（`CORS_ALLOWED_ORIGINS[1]`）の下に置きます。入れ子の設定は、`//kanna:config` を付けた別の構造体にします。
+それ以外の型（ポインタ、スライス、マップ、構造体など）は、生成を止めます。カンマで区切ったリストなどは、`UnmarshalText` を持つ型を作って読みます。そのフィールドの `dive` は、要素を 1 つずつ確かめ、誤りを添字を付けた設定の名前（`CORS_ALLOWED_ORIGINS[1]`）の下に置きます。入れ子の設定は、`//kanna:config` を付けた別の構造体にします。`UnmarshalText` を持つリストの型は、たとえば次のように書きます:
+
+```go
+// Origins is read from a comma-separated list, such as CORS_ALLOWED_ORIGINS=https://a.example,https://b.example.
+type Origins []string
+
+func (o *Origins) UnmarshalText(text []byte) error {
+	*o = strings.Split(string(text), ",")
+	return nil
+}
+
+//kanna:config
+type CORS struct {
+	AllowedOrigins Origins `validate:"required,dive,max=20"`
+}
+```
+
+`dive` が各 origin を確かめ、2 つ目が長すぎれば `CORS_ALLOWED_ORIGINS[1]: too_long (count=20)` と報告します。
 
 読めなかった誤りは、値ではなく、コードとパラメータで報告します。設定は秘密を持ちうるからです。読めない数、bool、時間は、型を付けた `invalid` です（`DATABASE_POOL_MAX_CONNS: invalid (type=int32)`）。コンストラクタや `UnmarshalText` が返した誤りは、kanna-value のルールのようにコードを持てばそのまま返し、持たなければ型を付けた `invalid` にします。`slog.Level` の誤りは値を含むからです。コードがあっても値を含むことはあるので、コードとパラメータに何を入れるかは、その型を書いた人の責任です。`type` パラメータは、ログや構造化された誤りのためのもので、翻訳の文言で表示できるとは約束しません。実行時に読む既定値が読めなかったときは、既定値のテキストではなく `default=true` のパラメータも付けます（`SERVER_LEVEL: invalid (default=true, type=slog.Level)`）。既定値が破ったルールの誤りには付けません。
 
@@ -256,6 +276,12 @@ type Database struct {
 | `env:"X,unset"` | `LoadX` のあとで `os.Unsetenv` を呼びます |
 | `env:"X,init"` | ポインタは読まないので、要りません |
 
+ほかにも違う点が 3 つあります。
+
+- `env` タグのないフィールドも、構造体とフィールドの名前で決まる名前で読み、フラグも作ります。読ませないフィールドには `config:"-"` を付けます。
+- `Options.Prefix` にあたるものはありません。接頭語は構造体ごとに `prefix=` で決め、`env:"…"` で書いた変数には付きません。
+- `.env` ファイルは読みません。godotenv で読んでいたプログラムは、これまでどおり `source.Open` の前に自分で読み込みます。
+
 ## フラグ
 
 ```sh
@@ -270,9 +296,24 @@ kanna-config [flags] [packages]
 | `-deps` | 実行が読み書きするものを、`kanna` コマンドのために JSON で表示して終了する |
 | `-version` | バージョンを表示する |
 
+パッケージのデフォルトはカレントディレクトリのパッケージなので、`//go:generate go tool kanna-config` に引数は不要です。成功した実行は、警告以外何も出力しません。警告の 1 つは実行そのものについてのもので、対象のパッケージに `//kanna:config` を付けた構造体が 1 つもなければ、残っている `//go:generate` の行は無害なので成功しますが、そのことを知らせます:
+
+```console
+$ go generate ./...
+warning: no struct is marked //kanna:config in example.com/app/config
+```
+
 ## サンプル
 
 [`example`](example) は、サーバーの設定を、YAML のファイル、TOML のファイル、環境変数、フラグから読み、それぞれが与えるものと、読めない設定やルールに反する設定の誤りを表示します。CI はこれを再生成し、出力が変わる場合は失敗します。
+
+## 開発
+
+```sh
+make test       # unit tests, in the root module and in yaml and toml
+make lint       # golangci-lint
+make example    # regenerate the example, vet it, and run it
+```
 
 ## ライセンス
 

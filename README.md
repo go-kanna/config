@@ -15,10 +15,11 @@ It is one of the [kanna](https://go-kanna.github.io/) family of code generators.
 
 ```sh
 go get -tool github.com/go-kanna/config/cmd/kanna-config
-go get github.com/go-kanna/config github.com/go-kanna/validator
 ```
 
-The generated code imports package [`source`](source) of this module, the runtime of go-kanna/validator, and the constructors of the types of [kanna-value](https://github.com/go-kanna/value) it reads. A YAML or a TOML file is read by a module of its own, which only a program reading one requires:
+The generated code imports package [`source`](source) of this module and the runtime of go-kanna/validator, which the
+line above already requires, and the constructors of the types of [kanna-value](https://github.com/go-kanna/value) it
+reads. A YAML or a TOML file is read by a module of its own, which only a program reading one requires:
 
 ```sh
 go get github.com/go-kanna/config/yaml   # or github.com/go-kanna/config/toml
@@ -139,7 +140,10 @@ A name of `env:"…"` is read as written, lower case included (`http_proxy`), bu
 
 ## Sources
 
-A setting is looked for in the flags, then in the environment, then in the files, the last first, and the first to give it text gives its value. An empty text gives none, as an unset one does: `DATABASE_POOL_MAX_CONNS=` in a file of variables is the same as no line.
+A setting is looked for in the flags, then in the environment, then in the files, the last first, and the first to give it text gives its value. An empty text gives none, as an unset one does: An exported `DATABASE_POOL_MAX_CONNS=` is the same as an unset variable.
+
+kanna-config reads no `.env` file. The environment is the process's own, so load such a file before `source.Open` with a
+library such as godotenv, or let the shell or the runtime export it.
 
 A variable may hold, rather than the value, the path of a file holding it, as Kubernetes mounts a secret: `DATABASE_PASSWORD_FILE` gives `DATABASE_PASSWORD` the content of that file, less one line ending at its end. Both set stop the read with an error.
 
@@ -191,6 +195,8 @@ type Database struct {
 
 The default of a string, a bool, a number, a `time.Duration`, or an enum of kanna-value is read on generating, and written as a Go value: `x.PoolMaxConns = 10`, an integer as it is written, such as `x.DirMode = 0755`, `x.DialTimeout = 5 * time.Second`, a constant of the enum, or `math.NaN()` and `math.Inf(1)` for `NaN` and `+Inf`, which no constant holds and whose rules are checked on reading. One that does not read stops the run. It is checked then by the rules that tell by the value alone, run no code of the program, and need no other field: `required`, the lengths, the comparisons, `oneof`, and `pattern`. A default one of them rejects stops the run, as it would fail every start without the setting. `rule=Type`, `eqfield`, `email`, `url`, `uuid`, and the hook are checked on reading, and so are all the rules of a field whose `required` or `omitempty` asks the `IsZero` method of its type. The default of a value type of kanna-value or of a type with `UnmarshalText` is read when the setting is given nowhere, as a setting is.
 
+An enum of kanna-value with no `default` is as good as required. Given nowhere, it stays the zero value, which the enum's `Validate` rejects as `inclusion`. Add `validate:"omitempty"` to let it stay unset.
+
 ## Types it reads
 
 The first of these that fits a field's type reads it:
@@ -206,7 +212,24 @@ The first of these that fits a field's type reads it:
 | an integer, or a type defined on one | `strconv.ParseInt` or `strconv.ParseUint`, at its size, as a Go literal: `0755` is octal, and `0x1F`, `0o755`, `0b101`, and `1_000` read too |
 | a float, or a type defined on one | `strconv.ParseFloat`, at its size |
 
-Any other type, such as a pointer, a slice, a map, or a struct, stops the run. A list, such as one separated by commas, is read by a type of its own with `UnmarshalText`, and `dive` on its field checks each element, under the name of the setting with the index, as `CORS_ALLOWED_ORIGINS[1]`. Settings that nest are a struct of their own, marked `//kanna:config`.
+Any other type, such as a pointer, a slice, a map, or a struct, stops the run. A list, such as one separated by commas, is read by a type of its own with `UnmarshalText`, and `dive` on its field checks each element, under the name of the setting with the index, as `CORS_ALLOWED_ORIGINS[1]`. Settings that nest are a struct of their own, marked `//kanna:config`. A list type with `UnmarshalText` looks like this:
+
+```go
+// Origins is read from a comma-separated list, such as CORS_ALLOWED_ORIGINS=https://a.example,https://b.example.
+type Origins []string
+
+func (o *Origins) UnmarshalText(text []byte) error {
+	*o = strings.Split(string(text), ",")
+	return nil
+}
+
+//kanna:config
+type CORS struct {
+	AllowedOrigins Origins `validate:"required,dive,max=20"`
+}
+```
+
+Here `dive` checks each origin, and a long second one is reported as `CORS_ALLOWED_ORIGINS[1]: too_long (count=20)`.
 
 What cannot be read is reported by a code and its params, never by the value, which a setting may keep secret: a number, a bool, or a duration that does not read is `invalid` with the type, as in `DATABASE_POOL_MAX_CONNS: invalid (type=int32)`. What a constructor or an `UnmarshalText` returns is kept when it has a code, as the rules of kanna-value do, and otherwise is `invalid` with the type: the error of `slog.Level` holds the value. Having a code is no proof of holding no value; what a code and its params say is up to whoever writes the type. The `type` param is there for a log or a structured error, and no promise of a placeholder a translation can show. A default that cannot be read when the program runs gets the param `default=true` besides, and not its text, as in `SERVER_LEVEL: invalid (default=true, type=slog.Level)`; the rules it breaks get none.
 
@@ -256,6 +279,14 @@ A name written `env:"…"` reads as it does in [caarlos0/env](https://github.com
 | `env:"X,unset"` | Call `os.Unsetenv` after `LoadX` |
 | `env:"X,init"` | No pointer is read, so there is nothing to make |
 
+Three more things differ:
+
+- A field with no `env` tag is read too, by the name its struct and field give it, and it gets a flag as well. Tag a field
+  `config:"-"` to leave it out.
+- Nothing corresponds to `Options.Prefix`. A prefix belongs to a struct (`prefix=`), and a variable written with
+  `env:"…"` takes none.
+- kanna-config reads no `.env` file. A program that used godotenv keeps calling it before `source.Open`.
+
 ## Flags
 
 ```sh
@@ -265,14 +296,31 @@ kanna-config [flags] [packages]
 | Flag | Meaning |
 |---|---|
 | `-tags <list>` | comma-separated build tags |
-| `-check` | verify the output is up to date instead of writing it, no stale output left included; `KANNA_CHECK=1` does the same |
+| `-check` | verify the output is up to date instead of writing it, including that no output is left over; `KANNA_CHECK=1` does the same |
 | `-v` | list the files written, removed, and left unchanged |
 | `-deps` | print what a run reads and writes, as JSON, for the `kanna` command, and exit |
 | `-version` | print the version |
 
+The packages default to the one in the current directory, so `//go:generate go tool kanna-config` needs no argument. A
+run that succeeds prints nothing but its warnings. One is about the run itself: when no struct in its packages is marked
+`//kanna:config`, it succeeds, since a `//go:generate` line left behind does no harm, but says so:
+
+```console
+$ go generate ./...
+warning: no struct is marked //kanna:config in example.com/app/config
+```
+
 ## Example
 
 [`example`](example) reads the settings of a server from a YAML file, a TOML file, the environment, and flags, and prints what each gives, and what is wrong with settings that cannot be read or break a rule. CI regenerates it and fails if the output changes.
+
+## Development
+
+```sh
+make test       # unit tests, in the root module and in yaml and toml
+make lint       # golangci-lint
+make example    # regenerate the example, vet it, and run it
+```
 
 ## License
 
