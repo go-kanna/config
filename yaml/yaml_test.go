@@ -3,11 +3,11 @@ package yaml_test
 import (
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/go-kanna/config/yaml"
 )
 
+// A value is read as the text it is written as, not as the library types it.
 func TestDecode(t *testing.T) {
 	t.Parallel()
 
@@ -15,22 +15,40 @@ func TestDecode(t *testing.T) {
 database:
   writer_url: postgres://writer@db/app
   pool_max_conns: 20
-  ratio: 0.5
-  debug: true
+  ratio: 1.20
+  whole: 1.0
+  hex: 0x1F
+  debug: True
   started: 2026-11-07T09:30:00Z
+  day: 2026-01-01
+  phone: 09012345678
+  zip: "0123"
+  octal: 0123
+  big: 12345678901234567890123
   password:
-api:
+  tilde: ~
+  hosts: [a, b]
+base: &base
   port: 8080
+other:
+  host: &host example.com
+api:
+  <<: *base
+  host: *host
 `))
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := map[string]any{
 		"database": map[string]any{
-			"writer_url": "postgres://writer@db/app", "pool_max_conns": 20, "ratio": 0.5, "debug": true,
-			"started": time.Date(2026, 11, 7, 9, 30, 0, 0, time.UTC), "password": nil,
+			"writer_url": "postgres://writer@db/app", "pool_max_conns": "20", "ratio": "1.20", "whole": "1.0",
+			"hex": "0x1F", "debug": "True", "started": "2026-11-07T09:30:00Z", "day": "2026-01-01",
+			"phone": "09012345678", "zip": "0123", "octal": "0123", "big": "12345678901234567890123",
+			"password": nil, "tilde": nil, "hosts": []any{"a", "b"},
 		},
-		"api": map[string]any{"port": 8080},
+		"base":  map[string]any{"port": "8080"},
+		"api":   map[string]any{"port": "8080", "host": "example.com"},
+		"other": map[string]any{"host": "example.com"},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Decode = %#v, want %#v", got, want)
@@ -53,7 +71,7 @@ func TestDecode_Markers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := map[string]any{"api": map[string]any{"port": 8080}}; !reflect.DeepEqual(got, want) {
+	if want := map[string]any{"api": map[string]any{"port": "8080"}}; !reflect.DeepEqual(got, want) {
 		t.Errorf("Decode = %#v, want %#v", got, want)
 	}
 }

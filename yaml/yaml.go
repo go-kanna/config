@@ -21,7 +21,8 @@ import (
 // it says of the line.
 var lineOf = regexp.MustCompile(`^(?:yaml: )?line (\d+):`)
 
-// Decode reads a YAML mapping into its sections. An empty document has none,
+// Decode reads a YAML mapping into its sections, and each value as the text it
+// is written as: 0123 is 0123, not 83. An empty document has none,
 // and a second document is an error, which would otherwise go unread. Its
 // error says where the document is wrong, but not what the library says of
 // it, which may quote a secret written there.
@@ -45,8 +46,9 @@ func Decode(data []byte) (map[string]any, error) {
 	if len(doc.Content) == 0 {
 		return map[string]any{}, nil
 	}
-	var tree map[string]any
-	if err := doc.Decode(&tree); err != nil {
+	// The values must decode as the library types them, as !!int s3cr3t does not.
+	var typed map[string]any
+	if err := doc.Decode(&typed); err != nil {
 		if root := doc.Content[0]; root.Kind != yaml.MappingNode {
 			return nil, fmt.Errorf("line %d, column %d is not a YAML mapping", root.Line, root.Column)
 		}
@@ -55,10 +57,49 @@ func Decode(data []byte) (map[string]any, error) {
 		}
 		return nil, invalid(err)
 	}
-	if tree == nil {
-		return map[string]any{}, nil
+	var texts map[string]text
+	if err := doc.Decode(&texts); err != nil {
+		return nil, invalid(err)
 	}
-	return tree, nil
+	return sections(texts), nil
+}
+
+// text is a value as it is written: a scalar's text, or a mapping or a
+// sequence of them. A null is nil.
+type text struct{ v any }
+
+func (t *text) UnmarshalYAML(n *yaml.Node) error {
+	switch n.Kind {
+	case yaml.MappingNode:
+		var m map[string]text
+		if err := n.Decode(&m); err != nil {
+			return err //nolint:wrapcheck // invalid reports it by the line it names
+		}
+		t.v = sections(m)
+	case yaml.SequenceNode:
+		var s []text
+		if err := n.Decode(&s); err != nil {
+			return err //nolint:wrapcheck // invalid reports it by the line it names
+		}
+		l := make([]any, len(s))
+		for i, e := range s {
+			l[i] = e.v
+		}
+		t.v = l
+	case yaml.ScalarNode:
+		t.v = n.Value
+	case yaml.DocumentNode, yaml.AliasNode:
+		// Decoding resolves these before it reaches a value.
+	}
+	return nil
+}
+
+func sections(m map[string]text) map[string]any {
+	tree := make(map[string]any, len(m))
+	for k, t := range m {
+		tree[k] = t.v
+	}
+	return tree
 }
 
 // undecodable returns the first value under n that does not decode, such as
