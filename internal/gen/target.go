@@ -58,6 +58,9 @@ var envOptions = map[string]string{
 type target struct {
 	scan.Struct
 
+	// section is the words of the struct, which name its section of a file.
+	section string
+
 	// fields are the fields read, in declaration order.
 	fields []field
 
@@ -137,6 +140,7 @@ func plan(
 		}
 		prefix = a.Value
 	}
+	t.section = prefix
 	if s.Named.TypeParams().Len() > 0 {
 		return t, append(diags, diag.Errorf(s.Pos, "generic struct %s is not supported", s.Name))
 	}

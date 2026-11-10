@@ -47,14 +47,21 @@ type Value struct {
 }
 
 // Source finds settings. The generated LoadX asks it for each setting through
-// Lookup alone, so a Source of your own, such as a fixed one in a test, may
-// take the place of what Open and Env return, and then decides for itself where
-// to look and in what order. It is not part of the order above.
+// Lookup, and for what else a section holds through Unknown, so a Source of
+// your own, such as a fixed one in a test, may take the place of what Open and
+// Env return, and then decides for itself where to look and in what order. It
+// is not part of the order above.
 type Source interface {
 	// Lookup returns the text k is given where it is found first, and false
 	// when it is found nowhere. An error says why what is there cannot be
 	// read, and Value.Name names where.
 	Lookup(k Key) (Value, bool, error)
+
+	// Unknown returns what is set under section, the words of a struct, but
+	// is none of keys, the keys of its fields, under the name each goes by,
+	// such as database.pool_max_con, once each: the generated LoadX reports
+	// each as an error. A Source that reads no file returns none.
+	Unknown(section string, keys []string) []Value
 }
 
 // Sources are where settings are read from besides the environment, which is
@@ -128,6 +135,38 @@ type sources struct {
 type file struct {
 	path string
 	tree map[string]any
+}
+
+// Unknown returns, for each file in order, the keys under section that are
+// none of keys, and the sections at the top whose names differ from section
+// in case alone, such as Database. A section of no struct is not looked at,
+// as another LoadX may read it.
+func (s *sources) Unknown(section string, keys []string) []Value {
+	var (
+		found []Value
+		seen  = map[string]bool{}
+	)
+	add := func(name string, v any) {
+		if !seen[name] {
+			seen[name] = true
+			text, _ := scalar(v)
+			found = append(found, Value{Text: text, Name: name})
+		}
+	}
+	for _, f := range s.files {
+		for _, name := range slices.Sorted(maps.Keys(f.tree)) {
+			if name != section && strings.EqualFold(name, section) {
+				add(name, f.tree[name])
+			}
+		}
+		tree, _ := f.tree[section].(map[string]any)
+		for _, name := range slices.Sorted(maps.Keys(tree)) {
+			if !slices.Contains(keys, name) {
+				add(section+"."+name, tree[name])
+			}
+		}
+	}
+	return found
 }
 
 func (s *sources) Lookup(k Key) (Value, bool, error) {
@@ -290,6 +329,23 @@ func Coded(err error, typ string) error {
 		return err
 	}
 	return validator.FailWith("invalid", map[string]any{"type": typ})
+}
+
+// UnknownKey is for the generated LoadX, not to be called by hand. It returns
+// the error of name, which Unknown of a Source returned for section and keys,
+// and says which of them it means when it differs in case alone. It does not
+// hold the value, which a setting may keep secret.
+func UnknownKey(name, section string, keys []string) error {
+	key, ok := strings.CutPrefix(name, section+".")
+	if !ok {
+		return fmt.Errorf("names no section; did you mean %s?", section)
+	}
+	for _, k := range keys {
+		if strings.EqualFold(k, key) {
+			return fmt.Errorf("is no setting of the section %s; did you mean %s.%s?", section, section, k)
+		}
+	}
+	return fmt.Errorf("is no setting of the section %s", section)
 }
 
 // Default is for the generated LoadX, not to be called by hand. It returns err,

@@ -74,6 +74,11 @@ func LoadServer(src source.Source) (Server, error) {
 		}
 	}
 
+	keys := []string{"level", "port", "timeout"}
+	for _, v := range src.Unknown("server", keys) {
+		errs.Add(v.Name, source.UnknownKey(v.Name, "server", keys))
+	}
+
 	if len(errs) > 0 {
 		return Server{}, errs
 	}
@@ -125,6 +130,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
+	}
+
+	keys := []string{"pool_max_conns", "writer_url"}
+	for _, v := range src.Unknown("database", keys) {
+		errs.Add(v.Name, source.UnknownKey(v.Name, "database", keys))
 	}
 
 	if len(errs) > 0 {

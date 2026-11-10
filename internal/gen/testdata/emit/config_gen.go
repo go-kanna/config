@@ -113,6 +113,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 		}
 	}
 
+	keys := []string{"admin_url", "debug", "dial_timeout", "pool_max_conns", "ratio", "replica_url", "retries", "writer_url"}
+	for _, v := range src.Unknown("database", keys) {
+		errs.Add(v.Name, source.UnknownKey(v.Name, "database", keys))
+	}
+
 	if len(errs) > 0 {
 		return Database{}, errs
 	}
@@ -158,6 +163,11 @@ func LoadOAuth(src source.Source) (OAuth, error) {
 		errs.Add(v.Name, err)
 	} else if ok {
 		x.AuthToken = v.Text
+	}
+
+	keys := []string{"client_id", "token"}
+	for _, v := range src.Unknown("oauth", keys) {
+		errs.Add(v.Name, source.UnknownKey(v.Name, "oauth", keys))
 	}
 
 	if len(errs) > 0 {
@@ -296,6 +306,11 @@ func LoadAPI(src source.Source) (API, error) {
 		x.Alias = v.Text
 	}
 
+	keys := []string{"admin", "alias", "level", "listen", "mode", "name", "port", "public"}
+	for _, v := range src.Unknown("api", keys) {
+		errs.Add(v.Name, source.UnknownKey(v.Name, "api", keys))
+	}
+
 	if len(errs) > 0 {
 		return API{}, errs
 	}
@@ -367,6 +382,11 @@ func LoadPaths(src source.Source) (Paths, error) {
 	} else if ok {
 		nameHostName = v.Name
 		x.HostName = v.Text
+	}
+
+	keys := []string{"host", "host_name"}
+	for _, v := range src.Unknown("paths", keys) {
+		errs.Add(v.Name, source.UnknownKey(v.Name, "paths", keys))
 	}
 
 	if len(errs) > 0 {
@@ -449,6 +469,11 @@ func LoadLimits(src source.Source) (Limits, error) {
 		}
 	}
 
+	keys := []string{"ceiling", "floor", "scale"}
+	for _, v := range src.Unknown("limits", keys) {
+		errs.Add(v.Name, source.UnknownKey(v.Name, "limits", keys))
+	}
+
 	if len(errs) > 0 {
 		return Limits{}, errs
 	}
@@ -502,6 +527,11 @@ func LoadUpload(src source.Source) (Upload, error) {
 		} else {
 			x.Offset = int16(n)
 		}
+	}
+
+	keys := []string{"dir_mode", "offset"}
+	for _, v := range src.Unknown("upload", keys) {
+		errs.Add(v.Name, source.UnknownKey(v.Name, "upload", keys))
 	}
 
 	if len(errs) > 0 {
@@ -586,8 +616,44 @@ func LoadFallback(src source.Source) (Fallback, error) {
 		}
 	}
 
+	keys := []string{"admin", "level", "public"}
+	for _, v := range src.Unknown("fallback", keys) {
+		errs.Add(v.Name, source.UnknownKey(v.Name, "fallback", keys))
+	}
+
 	if len(errs) > 0 {
 		return Fallback{}, errs
+	}
+	return x, nil
+}
+
+// DefineReplicaFlags defines on fs2 the flags that LoadReplica reads Replica from.
+func DefineReplicaFlags(fs2 *flag.FlagSet) {
+	source.DefineFlag(fs2, "database-replica-url", "Replica.ReplicaURL (DATABASE_REPLICA_URL)", "", false)
+}
+
+// LoadReplica reads Replica from src, and checks it by its validate tags.
+// It returns the validator.Errors of each setting it cannot read, or else of
+// each rule the settings break, under the name each goes by where it is set.
+func LoadReplica(src source.Source) (Replica, error) {
+	var (
+		x    Replica
+		errs validator.Errors
+	)
+
+	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_REPLICA_URL", File: []string{"database", "replica_url"}, Flag: "database-replica-url"}); err != nil {
+		errs.Add(v.Name, err)
+	} else if ok {
+		x.ReplicaURL = v.Text
+	}
+
+	keys := []string{"admin_url", "debug", "dial_timeout", "pool_max_conns", "ratio", "replica_url", "retries", "writer_url"}
+	for _, v := range src.Unknown("database", keys) {
+		errs.Add(v.Name, source.UnknownKey(v.Name, "database", keys))
+	}
+
+	if len(errs) > 0 {
+		return Replica{}, errs
 	}
 	return x, nil
 }
