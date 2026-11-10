@@ -131,7 +131,8 @@ func TestLookup_Files(t *testing.T) {
 	base := writeFile(t, "base.json", `{
 		"database": {"writer_url": "postgres://base@db/app", "pool_max_conns": 10, "debug": true, "ratio": 0.5,
 			"replica": {"url": "x"}, "hosts": ["a", "b"], "none": null},
-		"api": "flat"
+		"api": "flat",
+		"cache": null
 	}`)
 	prod := writeFile(t, "prod.json", `{"database": {"pool_max_conns": 30}}`)
 	src, err := source.Open(source.Sources{Files: []source.File{
@@ -163,6 +164,7 @@ func TestLookup_Files(t *testing.T) {
 		{path: []string{"database", "missing"}},
 		{path: []string{"database", "none"}},
 		{path: []string{"other", "key"}},
+		{path: []string{"cache", "url"}},
 		{path: nil},
 		{
 			path: []string{"database", "replica"},

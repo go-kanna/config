@@ -159,7 +159,7 @@ api:
   port: 8080
 ```
 
-A value in a file is read as its text, as a variable is: `20` and `"20"` read the same, and a YAML `0123` reads as `0123`, which an integer setting reads as Go does, as the octal 83, and a string setting as it is. A section or a list where a value goes is an error. A null is unset.
+A value in a file is read as its text, as a variable is: `20` and `"20"` read the same, and a YAML `0123` reads as `0123`, which an integer setting reads as Go does, as the octal 83, and a string setting as it is. A section or a list where a value goes is an error. A null is unset, and so is each setting under a null section, such as a YAML section whose keys are all commented out.
 
 The TOML library does not give the text of a number, a date, or a time, so they are written back from what they are: a number in decimal, so that `0x1F` reads as `31` and `1_000` as `1000`; a float with its point, so that `1.0` reads as `1.0`, which an integer setting rejects, and `1.20` as `1.2`; and a date or a time in the form of RFC 3339, with no time zone it does not name, so that `1979-05-27` reads as `1979-05-27` and `1979-05-27 07:32:00Z` as `1979-05-27T07:32:00Z`. Quote a value to read it as it is written.
 

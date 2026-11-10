@@ -156,6 +156,9 @@ func (f file) lookup(path []string) (Value, bool, error) {
 	name := strings.Join(path, ".")
 	var node any = f.tree
 	for _, p := range path {
+		if node == nil {
+			return Value{}, false, nil
+		}
 		section, ok := node.(map[string]any)
 		if !ok {
 			above := strings.Join(path[:len(path)-1], ".")
