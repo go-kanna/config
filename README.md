@@ -122,7 +122,7 @@ Each field is one setting, named by words: those of the struct, then those of th
 | `Database.PoolMaxConns` | `DATABASE_POOL_MAX_CONNS` | `pool_max_conns` in section `database` | `-database-pool-max-conns` |
 | `API.Port` | `API_PORT` | `port` in section `api` | `-api-port` |
 
-The words of the struct set apart the settings of each struct. Two structs of one name, such as `postgres.Config` and `redis.Config`, read the same settings, which is allowed, as sharing a setting may be meant.
+The words of the struct set apart the settings of each struct. Fields of two structs whose names all agree read one setting, which is allowed, as sharing a setting may be meant: two structs of one name, such as `postgres.Config` and `redis.Config`, both read `CONFIG_HOST`, and defining the flags of both on one `FlagSet` defines `-config-host` once. Fields of two structs of one package whose names agree only in part stop the run, such as `Database.WriterURL` and `DatabaseWriter.URL`, which share `DATABASE_WRITER_URL` and `-database-writer-url` but not the key of a file, as does a field whose variable names the file of another struct's, such as `AppLog.File` (`APP_LOG_FILE`) beside `App.Log`. kanna-config compares the structs of one package, not those of different packages.
 
 The names are external: what a deployment sets. Where the words of the struct are not those, write them with `prefix=`, in snake case: a struct named `OAuth` splits into `o_auth`, and the word `config` of a struct named `Config` says nothing of what it holds.
 

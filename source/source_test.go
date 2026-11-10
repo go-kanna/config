@@ -307,6 +307,22 @@ func TestDefineFlag_Bool(t *testing.T) {
 	}
 }
 
+// Two structs of one name in two packages read one setting, defining its flag
+// twice.
+func TestDefineFlag_Shared(t *testing.T) {
+	t.Parallel()
+
+	fs := flag.NewFlagSet("app", flag.ContinueOnError)
+	source.DefineFlag(fs, "config-host", "Config.Host", "db", false)
+	source.DefineFlag(fs, "config-host", "Config.Host", "cache", false)
+	if err := fs.Parse([]string{"-config-host", "local"}); err != nil {
+		t.Fatal(err)
+	}
+	if f := fs.Lookup("config-host"); f.DefValue != "db" || f.Value.String() != "local" {
+		t.Errorf("flag = %q, default %q, want local, default db", f.Value, f.DefValue)
+	}
+}
+
 type stringer struct{}
 
 func (stringer) String() string { return "local" }

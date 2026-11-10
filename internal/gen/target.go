@@ -119,7 +119,7 @@ func targets(fset *token.FileSet, pkgs []*packages.Package) ([]target, []diag.Di
 			found = append(found, t)
 		}
 	}
-	return found, diags
+	return found, append(diags, across(found)...)
 }
 
 // plan works out how each field of s, marked by d, is read and checked.
@@ -380,13 +380,89 @@ func collisions(fields []field) []diag.Diag {
 	for _, f := range fields {
 		base, ok := strings.CutSuffix(f.key.env, "_FILE")
 		if other, found := vars[base]; ok && found {
-			diags = append(diags, fieldError(f.Field,
-				"%s reads the variable %s, which names the file of the variable %s that %s reads",
-				f.Name, f.key.env, base, other).
-				WithHints(`give one of them another name, with config:"…" or env:"…"`))
+			diags = append(diags, fileOf(f.Name, f, other))
 		}
 	}
 	return diags
+}
+
+// across reports two fields of different structs of one package whose names
+// agree in part, which read a setting together from one source and apart from
+// another, and a field whose variable names the file of another's. Two whose
+// names all agree share the setting.
+func across(found []target) []diag.Diag {
+	var (
+		pkgs  []string
+		byPkg = map[string][]read{}
+	)
+	for _, t := range found {
+		if _, ok := byPkg[t.PkgPath]; !ok {
+			pkgs = append(pkgs, t.PkgPath)
+		}
+		for _, f := range t.fields {
+			byPkg[t.PkgPath] = append(byPkg[t.PkgPath], read{f, t.Name})
+		}
+	}
+	var diags []diag.Diag
+	for _, pkg := range pkgs {
+		reads := byPkg[pkg]
+		for i, r := range reads {
+			for _, o := range reads[:i] {
+				if o.strct != r.strct {
+					diags = append(diags, partly(r, o)...)
+				}
+			}
+			base, ok := strings.CutSuffix(r.key.env, "_FILE")
+			if !ok || slices.ContainsFunc(reads, func(o read) bool { return o.strct == r.strct && o.key.env == base }) {
+				continue // collisions tells a variable of the struct itself
+			}
+			if j := slices.IndexFunc(reads, func(o read) bool { return o.key.env == base }); j >= 0 {
+				diags = append(diags, fileOf(r.strct+"."+r.Name, r.field, reads[j].strct+"."+reads[j].Name))
+			}
+		}
+	}
+	return diags
+}
+
+// read is a field read, and the struct it is a field of.
+type read struct {
+	field
+
+	strct string
+}
+
+// partly reports r, whose names agree with those of o in part.
+func partly(r, o read) []diag.Diag {
+	var same, apart, theirs []string
+	mine := settingNames(r.field)
+	for i, name := range settingNames(o.field) {
+		if name == mine[i] {
+			same = append(same, name)
+		} else {
+			apart, theirs = append(apart, mine[i]), append(theirs, name)
+		}
+	}
+	if len(same) == 0 || len(apart) == 0 {
+		return nil
+	}
+	return []diag.Diag{fieldError(r.Field, "%s.%s reads the %s that %s.%s reads too, but the %s where it reads the %s",
+		r.strct, r.Name, strings.Join(same, " and the "), o.strct, o.Name,
+		strings.Join(apart, " and the "), strings.Join(theirs, " and the ")).
+		WithHints("give the two the same names to share the setting, or names of their own, " +
+			`with prefix=, config:"…", or env:"…"`)}
+}
+
+// fileOf reports f, named name, whose variable names the file of the variable
+// that other reads.
+func fileOf(name string, f field, other string) diag.Diag {
+	return fieldError(f.Field, "%s reads the variable %s, which names the file of the variable %s that %s reads",
+		name, f.key.env, strings.TrimSuffix(f.key.env, "_FILE"), other).
+		WithHints(`give one of them another name, with config:"…" or env:"…"`)
+}
+
+// settingNames names the setting of f in each source.
+func settingNames(f field) [3]string {
+	return [3]string{"variable " + f.key.env, "key " + strings.Join(f.key.file, "."), "flag -" + f.key.flag}
 }
 
 // fieldError reports a problem of f, naming the field after it, as in
