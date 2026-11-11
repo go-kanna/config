@@ -55,13 +55,13 @@ func LoadDatabase(src source.Source) (Database, error) {
 	// ...
 
 	x.PoolMaxConns = 10
-	namePoolMaxConns := "DATABASE_POOL_MAX_CONNS"
+	pathPoolMaxConns := validator.Field("DATABASE_POOL_MAX_CONNS")
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_POOL_MAX_CONNS", File: []string{"database", "pool_max_conns"}, Flag: "database-pool-max-conns"}); err != nil {
-		errs.Add(validator.Field(v.Name), err)
+		errs.Add(v.Path, err)
 	} else if ok {
-		namePoolMaxConns = v.Name
+		pathPoolMaxConns = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
-			errs.Add(validator.Field(namePoolMaxConns), validator.FailWith("invalid", map[string]any{"type": "int32"}))
+			errs.Add(pathPoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
@@ -74,11 +74,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	}
 
 	if x.WriterURL == "" {
-		errs.Add(validator.Field(nameWriterURL), validator.Blank())
+		errs.Add(pathWriterURL, validator.Blank())
 	}
 
 	if x.PoolMaxConns < 1 {
-		errs.Add(validator.Field(namePoolMaxConns), validator.GreaterThanOrEqualTo[int32](1))
+		errs.Add(pathPoolMaxConns, validator.GreaterThanOrEqualTo[int32](1))
 	}
 
 	if len(errs) > 0 {
@@ -211,6 +211,8 @@ type Database struct {
 | 整数か、それを基にした型 | `strconv.ParseInt` か `strconv.ParseUint`（その大きさで）。Go のリテラルとして読むので、`0755` は 8 進数で、`0x1F`、`0o755`、`0b101`、`1_000` も読めます |
 | 浮動小数点数か、それを基にした型 | `strconv.ParseFloat`（その大きさで） |
 
+整数は、flag パッケージの `flag.Int` と同じく、Go の整数リテラルの規則で読みます。環境変数、フラグ、ファイルのどれでも同じです。`0x1F`、`0o755`、`0b101`、`1_000` も読めます。先頭が `0` なら 8 進数なので、`0755` は 493 になり、`08080` は誤りです。10 進数は、`PORT=8080` のように先頭に 0 を付けずに書きます。
+
 それ以外の型（ポインタ、スライス、マップ、構造体など）は、生成を止めます。カンマで区切ったリストなどは、`UnmarshalText` を持つ型を作って読みます。そのフィールドの `dive` は、要素を 1 つずつ確かめ、誤りを添字を付けた設定の名前（`CORS_ALLOWED_ORIGINS[1]`）の下に置きます。入れ子の設定は、`//kanna:config` を付けた別の構造体にします。`UnmarshalText` を持つリストの型は、たとえば次のように書きます:
 
 ```go
@@ -243,7 +245,7 @@ type CORS struct {
 
 読めなかった設定のフィールドは、読んだ値を持ちません。そのままルールを確かめると、フィールドをまたぐルールやフックが、欠けた値を見て誤りを報告しかねないからです。
 
-誤りは、その設定をした場所での名前の下に置きます。環境変数、`database.pool_max_conns`、`-database-pool-max-conns` のいずれかで、どこにも設定されていなければ環境変数の名前です。名前は、どう綴られていても、パスの `Segments` の 1 つのフィールドの区切りで、`database.pool_max_conns` は入れ子を表しません。フィールドの型自身の `Validate` が返す誤りは、その名前の下に残ります（`DATABASE_PRIMARY.host`）。フックは kanna-validator と同じく、フィールドを `validator.Field` と JSON の名前（なければ Go の名前）で名指します。kanna-config は、フックのパスを生成時に確かめ、フックが返した誤りを、`Field` でも `Segments` でも、フィールドの設定の名前の下に移します。パスのうち、フィールドの名前より後ろはそのまま残します。構造体全体の誤りは `base` のままです。
+誤りは、その設定をした場所での名前の下に置きます。環境変数、`database.pool_max_conns`、`-database-pool-max-conns` のいずれかで、どこにも設定されていなければ環境変数の名前です。パスの `Segments` では、環境変数とフラグは綴りによらず 1 つのフィールドの区切りで、ファイルの設定はセクションとキーの 2 つの区切りです（`validator.Field("database", "pool_max_conns")` と同じ）。フィールドの型自身の `Validate` が返す誤りは、その名前の下に残ります（`DATABASE_PRIMARY.host`）。フックは kanna-validator と同じく、フィールドを `validator.Field` と JSON の名前（なければ Go の名前）で名指します。kanna-config は、フックのパスを生成時に確かめ、フックが返した誤りを、`Field` でも `Segments` でも、フィールドの設定の名前の下に移します。パスのうち、フィールドの名前より後ろはそのまま残します。構造体全体の誤りは `base` のままです。
 
 コード付きにするのは、読むときの誤りだけです。ルールが返した誤りは、kanna-validator と同じくそのまま返します。同じルールが `LoadX` と `Validate` で同じ誤りを返すようにするためです。誤りに値を含めないのは、ルールを書いた人の責任です。kanna-value の `rule.Fail` と `validator.Fail` は値を含めません。
 

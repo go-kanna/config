@@ -121,14 +121,14 @@ func (e *emitter) load(t target) {
 	l := &loader{
 		emitter: e, t: t,
 		in: s.Name("src"), x: s.Name("x"), errs: s.Name("errs"),
-		locals: make(map[string]string), names: make(map[string]string),
+		locals: make(map[string]string), paths: make(map[string]string),
 	}
 	for _, base := range []string{"v", "ok", "err", "b", "n", "d", "e", "u", "o", "hook", "fe", "p", "keys"} {
 		l.locals[base] = s.Name(base)
 	}
 	for _, fd := range t.fields {
-		if l.needsName(fd) {
-			l.names[fd.Name] = s.Name("name" + fd.Name)
+		if l.needsPath(fd) {
+			l.paths[fd.Name] = s.Name("path" + fd.Name)
 		}
 	}
 	rt := e.w.Runtime()
@@ -154,7 +154,7 @@ func (e *emitter) load(t target) {
 	for _, fd := range t.fields {
 		if fd.checks != nil {
 			e.printf("\n")
-			body.Value(fd.checks, l.x+"."+fd.Name, l.names[fd.Name], l.names[fd.Name])
+			body.ValueAt(fd.checks, l.x+"."+fd.Name, l.paths[fd.Name], l.paths[fd.Name])
 		}
 	}
 	if t.hook != nil {
@@ -173,8 +173,8 @@ type loader struct {
 	in, x, errs string
 
 	// locals are the names of the other locals by what they would be called,
-	// and names the variable holding the name of each field's setting.
-	locals, names map[string]string
+	// and paths the variable holding the path of each field's setting.
+	locals, paths map[string]string
 
 	// def is set while writing the reading of a default, whose errors are
 	// marked as the default's.
@@ -199,30 +199,30 @@ func (l *loader) unknown() {
 	}
 	v, name := l.locals["v"], l.locals["keys"]
 	l.printf("\n%s := []string{%s}\n", name, strings.Join(keys, ", "))
-	l.printf("for _, %s := range %s.Unknown(%q, %s) {\n%s.Add(%s, %s.UnknownKey(%s.Name, %q, %s))\n}\n",
-		v, l.in, l.t.section, name, l.errs, l.at(v+".Name"), l.src, v, l.t.section, name)
+	l.printf("for _, %s := range %s.Unknown(%q, %s) {\n%s.Add(%s.Path, %s.UnknownKey(%s.Path, %q, %s))\n}\n",
+		v, l.in, l.t.section, name, l.errs, v, l.src, v, l.t.section, name)
 }
 
-// needsName reports whether the name of fd's setting is needed beyond where it
+// needsPath reports whether the path of fd's setting is needed beyond where it
 // is found: for an error of reading it, of its rules, or of the hook.
-func (l *loader) needsName(fd field) bool {
+func (l *loader) needsPath(fd field) bool {
 	return fd.read.kind != readText || fd.checks != nil || l.t.hook != nil || fd.def != nil && !fd.read.staticDefault()
 }
 
 // field writes the reading of fd: its default, then its setting, where it is.
 func (l *loader) field(fd field) {
 	v, ok, err := l.locals["v"], l.locals["ok"], l.locals["err"]
-	name := l.names[fd.Name]
+	name := l.paths[fd.Name]
 	if fd.def != nil && fd.read.staticDefault() {
 		l.printf("%s.%s = %s\n", l.x, fd.Name, l.defaultExpr(fd))
 	}
 	if name != "" {
-		l.printf("%s := %q\n", name, fd.key.env)
+		l.printf("%s := %s.Field(%q)\n", name, l.w.Runtime(), fd.key.env)
 	}
-	l.printf("if %s, %s, %s := %s.Lookup(%s); %s != nil {\n%s.Add(%s, %s)\n} else if %s {\n",
-		v, ok, err, l.in, l.keyLit(fd.key), err, l.errs, l.at(v+".Name"), err, ok)
+	l.printf("if %s, %s, %s := %s.Lookup(%s); %s != nil {\n%s.Add(%s.Path, %s)\n} else if %s {\n",
+		v, ok, err, l.in, l.keyLit(fd.key), err, l.errs, v, err, ok)
 	if name != "" {
-		l.printf("%s = %s.Name\n", name, v)
+		l.printf("%s = %s.Path\n", name, v)
 	}
 	l.printf("%s", l.read(fd.read, v+".Text", name, typeString(fd.Type, l.t.Struct), l.assign(fd)))
 	if fd.def != nil && !fd.read.staticDefault() {
@@ -232,12 +232,6 @@ func (l *loader) field(fd field) {
 		l.printf("} else {\n%s", def)
 	}
 	l.printf("}\n")
-}
-
-// at returns the path of the setting named name, a Go expression of a string:
-// one segment, whatever the name is spelled with.
-func (l *loader) at(name string) string {
-	return l.w.Runtime() + ".Field(" + name + ")"
 }
 
 // assign returns what stores a value read into fd.
@@ -254,11 +248,12 @@ func (l *loader) keyLit(k key) string {
 }
 
 // read returns what reads text, a Go expression of type string, as r says,
-// recording what cannot be read under name, which reports it as typeName, and
+// recording what cannot be read under name, a variable of its path, which
+// reports it as typeName, and
 // handing the value to assign.
 func (l *loader) read(r reader, text, name, typeName string, assign func(string) string) string {
 	invalid := func() string {
-		return fmt.Sprintf("%s.Add(%s, %s)\n", l.errs, l.at(name),
+		return fmt.Sprintf("%s.Add(%s, %s)\n", l.errs, name,
 			l.fail(fmt.Sprintf("%s.FailWith(\"invalid\", map[string]any{\"type\": %q})", l.w.Runtime(), typeName)))
 	}
 	parse := func(local, call string, convert bool) string {
@@ -306,7 +301,7 @@ func (l *loader) read(r reader, text, name, typeName string, assign func(string)
 		u, err := l.locals["u"], l.locals["err"]
 		return fmt.Sprintf("var %s %s\n", u, types.TypeString(r.typ, l.f.Qualifier)) +
 			fmt.Sprintf("if %s := %s.UnmarshalText([]byte(%s)); %s != nil {\n%s.Add(%s, %s)\n} else {\n%s}\n",
-				err, u, text, err, l.errs, l.at(name), l.coded(err, typeName), assign(u))
+				err, u, text, err, l.errs, name, l.coded(err, typeName), assign(u))
 	}
 	panic(fmt.Sprintf("emit: unknown reader %d", r.kind))
 }
@@ -322,7 +317,7 @@ func (l *loader) construct(
 		fn = q + "." + fn
 	}
 	return fmt.Sprintf("if %s, %s := %s(%s); %s != nil {\n%s.Add(%s, %s)\n} else {\n%s}\n",
-		local, err, fn, value, err, l.errs, l.at(name), l.coded(err, typeName), assign(local))
+		local, err, fn, value, err, l.errs, name, l.coded(err, typeName), assign(local))
 }
 
 // coded returns what reports err, returned for a value of type typeName.
@@ -385,20 +380,22 @@ func durationExpr(d time.Duration, timePkg string) string {
 }
 
 // hook writes the call of the hook of the struct, and moves what it reports
-// under the name of each field's setting: the hook names a field as
+// under the path of each field's setting: the hook names a field as
 // kanna-validator does, by its JSON name, in the first segment of the path.
 func (l *loader) hook() {
 	hook, fe, p := l.locals["hook"], l.locals["fe"], l.locals["p"]
 	rt := l.w.Runtime()
 	l.printf("\nvar %s %s.Errors\n%s.validate(&%s)\n", hook, rt, l.x, hook)
-	l.printf("for _, %s := range %s {\nfor _, %s := range []struct{ path, name string }{\n", fe, hook, p)
+	l.printf("for _, %s := range %s {\nfor _, %s := range []struct {\nname string\npath %s.Path\n}{\n", fe, hook, p, rt)
 	for _, fd := range l.t.fields {
-		l.printf("{%q, %s},\n", fd.path, l.names[fd.Name])
+		l.printf("{%q, %s},\n", fd.path, l.paths[fd.Name])
 	}
 	l.printf("} {\n")
-	l.printf("if len(%s.Segments) > 0 && %s.Segments[0] == (%s.Segment{Kind: %s.FieldSegment, Name: %s.path}) {\n",
+	l.printf("if len(%s.Segments) > 0 && %s.Segments[0] == (%s.Segment{Kind: %s.FieldSegment, Name: %s.name}) {\n",
 		fe, fe, rt, rt, p)
-	l.printf("%s.Field = %s.name + %s.TrimPrefix(%s.Field, %s.path)\n%s.Segments[0].Name = %s.name\nbreak\n}\n}\n",
-		fe, p, l.f.Import("strings", "strings"), fe, p, fe, p)
+	l.printf("%s.Field = %s.path.String() + %s.TrimPrefix(%s.Field, %s.name)\n",
+		fe, p, l.f.Import("strings", "strings"), fe, p)
+	l.printf("%s.Segments = %s.Concat(%s.path.Segments(), %s.Segments[1:])\nbreak\n}\n}\n",
+		fe, l.f.Import("slices", "slices"), p, fe)
 	l.printf("%s = append(%s, %s)\n}\n", l.errs, l.errs, fe)
 }
