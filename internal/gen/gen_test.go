@@ -40,7 +40,7 @@ func writeModule(t *testing.T, files map[string]string) string {
 	dir := t.TempDir()
 	files["go.mod"] = "module example.com/app\n\ngo 1.27.0\n\n" +
 		"require (\n\tgithub.com/go-kanna/config v0.0.0\n" +
-		"\tgithub.com/go-kanna/validator v0.0.28-0.20261110121539-f5b496614d8c\n)\n\n" +
+		"\tgithub.com/go-kanna/validator v0.0.28-0.20261111000017-4ba5aebc1695\n)\n\n" +
 		"replace github.com/go-kanna/config => " + root + "\n"
 	files["go.sum"] = string(sum)
 	for name, content := range files {
