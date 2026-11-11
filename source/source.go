@@ -32,18 +32,19 @@ type Key struct {
 	Flag string
 }
 
-// Value is the text a setting is given, and the name it goes by where it is
+// Value is the text a setting is given, and the path it goes by where it is
 // found.
 type Value struct {
 	// Text is what the setting is given, which the code kanna-config generates
 	// reads as the text of a variable.
 	Text string
 
-	// Name is where Text was found: the variable (or NAME_FILE, when it was
-	// read from the file that names), the path in a file joined by dots, such
-	// as database.writer_url, or the flag with its dash, such as
-	// -database-writer-url. An error is reported under it.
-	Name string
+	// Path is where Text was found, which an error is reported under: the
+	// variable (or NAME_FILE, when it was read from the file that names) or
+	// the flag with its dash, such as -database-writer-url, as one field
+	// segment, or the path in a file as a segment each, such as database and
+	// writer_url, spelled database.writer_url.
+	Path validator.Path
 }
 
 // Source finds settings. The generated LoadX asks it for each setting through
@@ -54,11 +55,11 @@ type Value struct {
 type Source interface {
 	// Lookup returns the text k is given where it is found first, and false
 	// when it is found nowhere. An error says why what is there cannot be
-	// read, and Value.Name names where.
+	// read, and Value.Path says where.
 	Lookup(k Key) (Value, bool, error)
 
 	// Unknown returns what is set under section, the words of a struct, but
-	// is none of keys, the keys of its fields, under the name each goes by,
+	// is none of keys, the keys of its fields, under the path each goes by,
 	// such as database.pool_max_con, once each: the generated LoadX reports
 	// each as an error. A Source that reads no file returns none.
 	Unknown(section string, keys []string) []Value
@@ -146,23 +147,23 @@ func (s *sources) Unknown(section string, keys []string) []Value {
 		found []Value
 		seen  = map[string]bool{}
 	)
-	add := func(name string, v any) {
-		if !seen[name] {
+	add := func(p validator.Path, v any) {
+		if name := p.String(); !seen[name] {
 			seen[name] = true
 			text, _ := scalar(v)
-			found = append(found, Value{Text: text, Name: name})
+			found = append(found, Value{Text: text, Path: p})
 		}
 	}
 	for _, f := range s.files {
 		for _, name := range slices.Sorted(maps.Keys(f.tree)) {
 			if name != section && strings.EqualFold(name, section) {
-				add(name, f.tree[name])
+				add(validator.Field(name), f.tree[name])
 			}
 		}
 		tree, _ := f.tree[section].(map[string]any)
 		for _, name := range slices.Sorted(maps.Keys(tree)) {
 			if !slices.Contains(keys, name) {
-				add(section+"."+name, tree[name])
+				add(validator.Field(section, name), tree[name])
 			}
 		}
 	}
@@ -171,7 +172,7 @@ func (s *sources) Unknown(section string, keys []string) []Value {
 
 func (s *sources) Lookup(k Key) (Value, bool, error) {
 	if text := s.flags[k.Flag]; k.Flag != "" && text != "" {
-		return Value{Text: text, Name: "-" + k.Flag}, true, nil
+		return Value{Text: text, Path: validator.Field("-" + k.Flag)}, true, nil
 	}
 	if v, ok, err := lookupEnv(k.Env); err != nil || ok {
 		return v, ok, err
@@ -194,28 +195,29 @@ func lookupEnv(name string) (Value, bool, error) {
 	text, path := os.Getenv(name), os.Getenv(name+"_FILE")
 	switch {
 	case text != "" && path != "":
-		return Value{Name: name}, false, fmt.Errorf("both %s and %s_FILE are set; set one of them", name, name)
+		err := fmt.Errorf("both %s and %s_FILE are set; set one of them", name, name)
+		return Value{Path: validator.Field(name)}, false, err
 	case text != "":
-		return Value{Text: text, Name: name}, true, nil
+		return Value{Text: text, Path: validator.Field(name)}, true, nil
 	case path == "":
 		return Value{}, false, nil
 	}
 	data, err := os.ReadFile(path) //nolint:gosec // the file the person running the program names
 	if err != nil {
-		return Value{Name: name + "_FILE"}, false, fmt.Errorf("read the file %s_FILE names: %w", name, err)
+		return Value{Path: validator.Field(name + "_FILE")}, false, fmt.Errorf("read the file %s_FILE names: %w", name, err)
 	}
 	text = strings.TrimSuffix(strings.TrimSuffix(string(data), "\n"), "\r")
 	if text == "" {
 		return Value{}, false, nil
 	}
-	return Value{Text: text, Name: name + "_FILE"}, true, nil
+	return Value{Text: text, Path: validator.Field(name + "_FILE")}, true, nil
 }
 
 func (f file) lookup(path []string) (Value, bool, error) {
 	if len(path) == 0 {
 		return Value{}, false, nil
 	}
-	name := strings.Join(path, ".")
+	at := validator.Field(path[0], path[1:]...)
 	var node any = f.tree
 	for i, p := range path {
 		if node == nil {
@@ -224,7 +226,7 @@ func (f file) lookup(path []string) (Value, bool, error) {
 		section, ok := node.(map[string]any)
 		if !ok {
 			above := strings.Join(path[:i], ".")
-			return Value{Name: name}, false, fmt.Errorf("%s is %s in %s, where a section goes", above, shape(node), f.path)
+			return Value{Path: at}, false, fmt.Errorf("%s is %s in %s, where a section goes", above, shape(node), f.path)
 		}
 		if node, ok = section[p]; !ok {
 			return Value{}, false, nil
@@ -232,12 +234,12 @@ func (f file) lookup(path []string) (Value, bool, error) {
 	}
 	text, ok := scalar(node)
 	if !ok {
-		return Value{Name: name}, false, fmt.Errorf("is %s in %s, where a value goes", shape(node), f.path)
+		return Value{Path: at}, false, fmt.Errorf("is %s in %s, where a value goes", shape(node), f.path)
 	}
 	if text == "" {
 		return Value{}, false, nil
 	}
-	return Value{Text: text, Name: name}, true, nil
+	return Value{Text: text, Path: at}, true, nil
 }
 
 // scalar returns the text of a value as a decoder of a file gives it, which
@@ -332,14 +334,15 @@ func Coded(err error, typ string) error {
 }
 
 // UnknownKey is for the generated LoadX, not to be called by hand. It returns
-// the error of name, which Unknown of a Source returned for section and keys,
-// and says which of them it means when it differs in case alone. It does not
-// hold the value, which a setting may keep secret.
-func UnknownKey(name, section string, keys []string) error {
-	key, ok := strings.CutPrefix(name, section+".")
-	if !ok {
+// the error of p, which Unknown of a Source returned for section and keys, and
+// says which of them it means when it differs in case alone. It does not hold
+// the value, which a setting may keep secret.
+func UnknownKey(p validator.Path, section string, keys []string) error {
+	segments := p.Segments()
+	if len(segments) != 2 || segments[0].Name != section {
 		return fmt.Errorf("names no section; did you mean %s?", section)
 	}
+	key := segments[1].Name
 	for _, k := range keys {
 		if strings.EqualFold(k, key) {
 			return fmt.Errorf("is no setting of the section %s; did you mean %s.%s?", section, section, k)

@@ -57,13 +57,13 @@ func LoadDatabase(src source.Source) (Database, error) {
 	// ...
 
 	x.PoolMaxConns = 10
-	namePoolMaxConns := "DATABASE_POOL_MAX_CONNS"
+	pathPoolMaxConns := validator.Field("DATABASE_POOL_MAX_CONNS")
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_POOL_MAX_CONNS", File: []string{"database", "pool_max_conns"}, Flag: "database-pool-max-conns"}); err != nil {
-		errs.Add(validator.Field(v.Name), err)
+		errs.Add(v.Path, err)
 	} else if ok {
-		namePoolMaxConns = v.Name
+		pathPoolMaxConns = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
-			errs.Add(validator.Field(namePoolMaxConns), validator.FailWith("invalid", map[string]any{"type": "int32"}))
+			errs.Add(pathPoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
@@ -76,11 +76,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	}
 
 	if x.WriterURL == "" {
-		errs.Add(validator.Field(nameWriterURL), validator.Blank())
+		errs.Add(pathWriterURL, validator.Blank())
 	}
 
 	if x.PoolMaxConns < 1 {
-		errs.Add(validator.Field(namePoolMaxConns), validator.GreaterThanOrEqualTo[int32](1))
+		errs.Add(pathPoolMaxConns, validator.GreaterThanOrEqualTo[int32](1))
 	}
 
 	if len(errs) > 0 {
@@ -221,6 +221,8 @@ The first of these that fits a field's type reads it:
 | an integer, or a type defined on one | `strconv.ParseInt` or `strconv.ParseUint`, at its size, as a Go literal: `0755` is octal, and `0x1F`, `0o755`, `0b101`, and `1_000` read too |
 | a float, or a type defined on one | `strconv.ParseFloat`, at its size |
 
+An integer is read as a Go integer literal, the way `flag.Int` of the flag package reads one, in a variable, a flag, and a file alike: `0x1F`, `0o755`, `0b101`, and `1_000` read, and a leading `0` makes the rest octal, so `0755` reads as 493 and `08080` is an error. Write a decimal number without a leading zero, as in `PORT=8080`.
+
 Any other type, such as a pointer, a slice, a map, or a struct, stops the run. A list, such as one separated by commas, is read by a type of its own with `UnmarshalText`, and `dive` on its field checks each element, under the name of the setting with the index, as `CORS_ALLOWED_ORIGINS[1]`. Settings that nest are a struct of their own, marked `//kanna:config`. A list type with `UnmarshalText` looks like this:
 
 ```go
@@ -253,7 +255,7 @@ The `validate` tags mean what they mean to kanna-validator, and `LoadX` checks t
 
 A setting that cannot be read leaves its field without the value read, and checking the rules then could report a rule across fields, or the hook, that the value it lacks breaks.
 
-An error goes under the name of the setting where it was set: the variable, `database.pool_max_conns`, or `-database-pool-max-conns`. A setting given nowhere goes under its variable. The name is one field segment of the path in `Segments`, however it is spelled, so that `database.pool_max_conns` nests nothing. What a field's own `Validate` reports stays under that name, as `DATABASE_PRIMARY.host`. The hook names a field as kanna-validator does, by `validator.Field` with its JSON name, or else its Go name. kanna-config checks the hook's paths on generating, and moves what the hook reports under the name of the field's setting, in `Field` and `Segments` alike, keeping what follows. An error on the struct as a whole stays under `base`.
+An error goes under the name of the setting where it was set: the variable, `database.pool_max_conns`, or `-database-pool-max-conns`. A setting given nowhere goes under its variable. In the path's `Segments`, a variable or a flag is one field segment, however it is spelled, and a setting in a file is two, its section and its key, as `validator.Field("database", "pool_max_conns")` makes them. What a field's own `Validate` reports stays under that name, as `DATABASE_PRIMARY.host`. The hook names a field as kanna-validator does, by `validator.Field` with its JSON name, or else its Go name. kanna-config checks the hook's paths on generating, and moves what the hook reports under the name of the field's setting, in `Field` and `Segments` alike, keeping what follows. An error on the struct as a whole stays under `base`.
 
 Only reading turns an error into a code. What a rule returns is returned as it is, as in kanna-validator, so that one rule reports the same in `LoadX` and in `Validate`: keeping a value out of an error is up to whoever writes the rule, and `rule.Fail` of kanna-value and `validator.Fail` keep it out.
 

@@ -263,8 +263,8 @@ func TestGenerated_Hook(t *testing.T) {
 	}
 }
 
-// The hook's errors move under the name of the setting in their segments too, as
-// one segment however the name is spelled, so that Field and Segments agree.
+// The hook's errors move under the path of the setting in their segments too,
+// the section and the key of a file, so that Field and Segments agree.
 func TestGenerated_HookSegments(t *testing.T) {
 	clearEnv(t)
 	t.Setenv("API_NAME", "app")
@@ -283,7 +283,9 @@ func TestGenerated_HookSegments(t *testing.T) {
 	if !ok || len(errs) != 1 {
 		t.Fatalf("LoadAPI error = %v, want one error", err)
 	}
-	want := []validator.Segment{{Kind: validator.FieldSegment, Name: "api.alias"}}
+	want := []validator.Segment{
+		{Kind: validator.FieldSegment, Name: "api"}, {Kind: validator.FieldSegment, Name: "alias"},
+	}
 	if fe := errs[0]; fe.Field != "api.alias" || !slices.Equal(fe.Segments, want) {
 		t.Errorf("LoadAPI error at %q %+v, want %q %+v", fe.Field, fe.Segments, "api.alias", want)
 	}
@@ -401,4 +403,54 @@ func TestGenerated_UnknownKeys(t *testing.T) { //nolint:paralleltest // it sets 
 	if _, err := emit.LoadReplica(src); errString(err) != want {
 		t.Errorf("LoadReplica error = %q, want %q", errString(err), want)
 	}
+}
+
+// An error of a setting in a file goes under its section and its key, as two
+// segments, and one of a variable under the variable, as one.
+func TestGenerated_FileSegments(t *testing.T) {
+	clearEnv(t)
+
+	load := func(t *testing.T, settings string) validator.Errors {
+		t.Helper()
+
+		path := filepath.Join(t.TempDir(), "settings.json")
+		if err := os.WriteFile(path, []byte(settings), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		src, err := source.Open(source.Sources{Files: []source.File{{Path: path, Decode: source.JSON}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = emit.LoadDatabase(src)
+		errs, _ := errors.AsType[validator.Errors](err)
+		return errs
+	}
+	fields := func(names ...string) []validator.Segment {
+		segments := make([]validator.Segment, len(names))
+		for i, n := range names {
+			segments[i] = validator.Segment{Kind: validator.FieldSegment, Name: n}
+		}
+		return segments
+	}
+	check := func(t *testing.T, errs validator.Errors, want ...[]validator.Segment) {
+		t.Helper()
+
+		got := make([][]validator.Segment, len(errs))
+		for i, fe := range errs {
+			got[i] = fe.Segments
+		}
+		if !slices.EqualFunc(got, want, slices.Equal) {
+			t.Errorf("LoadDatabase errors %v at %+v, want %+v", errs, got, want)
+		}
+	}
+
+	errs := load(t, `{"database": {"writer_url": "w", "pool_max_conns": "many", "pool_max_con": 1}}`)
+	check(t, errs, fields("database", "pool_max_conns"), fields("database", "pool_max_con"))
+
+	errs = load(t, `{"database": {"writer_url": "w", "pool_max_conns": 0}}`)
+	check(t, errs, fields("database", "pool_max_conns"))
+
+	t.Setenv("DATABASE_POOL_MAX_CONNS", "0")
+	errs = load(t, `{"database": {"writer_url": "w"}}`)
+	check(t, errs, fields("DATABASE_POOL_MAX_CONNS"))
 }

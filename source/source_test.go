@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -27,6 +28,11 @@ func writeFile(t *testing.T, name, content string) string {
 	return path
 }
 
+// same reports whether a and b hold the same text under the same segments.
+func same(a, b source.Value) bool {
+	return a.Text == b.Text && reflect.DeepEqual(a.Path.Segments(), b.Path.Segments())
+}
+
 // The tests below set variables of the process, which t.Setenv rules out for
 // parallel tests.
 
@@ -34,7 +40,8 @@ func TestLookup_Env(t *testing.T) {
 	t.Setenv("DATABASE_WRITER_URL", "postgres://writer@db/app")
 
 	v, ok, err := source.Env().Lookup(key)
-	if err != nil || !ok || v != (source.Value{Text: "postgres://writer@db/app", Name: "DATABASE_WRITER_URL"}) {
+	want := source.Value{Text: "postgres://writer@db/app", Path: validator.Field("DATABASE_WRITER_URL")}
+	if err != nil || !ok || !same(v, want) {
 		t.Errorf("Lookup = %+v, %v, %v", v, ok, err)
 	}
 }
@@ -52,7 +59,8 @@ func TestLookup_File(t *testing.T) {
 	t.Setenv("DATABASE_WRITER_URL_FILE", writeFile(t, "secret", "postgres://secret@db/app\r\n"))
 
 	v, ok, err := source.Env().Lookup(key)
-	if err != nil || !ok || v != (source.Value{Text: "postgres://secret@db/app", Name: "DATABASE_WRITER_URL_FILE"}) {
+	want := source.Value{Text: "postgres://secret@db/app", Path: validator.Field("DATABASE_WRITER_URL_FILE")}
+	if err != nil || !ok || !same(v, want) {
 		t.Errorf("Lookup = %+v, %v, %v", v, ok, err)
 	}
 }
@@ -70,7 +78,7 @@ func TestLookup_FileAndValue(t *testing.T) {
 	t.Setenv("DATABASE_WRITER_URL_FILE", writeFile(t, "secret", "x"))
 
 	v, _, err := source.Env().Lookup(key)
-	if err == nil || v.Name != "DATABASE_WRITER_URL" || !strings.Contains(err.Error(), "both") {
+	if err == nil || v.Path.String() != "DATABASE_WRITER_URL" || !strings.Contains(err.Error(), "both") {
 		t.Errorf("Lookup = %+v, %v, want an error on DATABASE_WRITER_URL", v, err)
 	}
 }
@@ -79,7 +87,7 @@ func TestLookup_FileMissing(t *testing.T) {
 	t.Setenv("DATABASE_WRITER_URL_FILE", filepath.Join(t.TempDir(), "none"))
 
 	v, _, err := source.Env().Lookup(key)
-	if err == nil || v.Name != "DATABASE_WRITER_URL_FILE" {
+	if err == nil || v.Path.String() != "DATABASE_WRITER_URL_FILE" {
 		t.Errorf("Lookup = %+v, %v, want an error on DATABASE_WRITER_URL_FILE", v, err)
 	}
 }
@@ -100,14 +108,14 @@ func TestLookup_FlagsWinOverTheEnvironment(t *testing.T) {
 	}
 
 	if v, ok, err := src.Lookup(key); err != nil || !ok ||
-		v != (source.Value{Text: "postgres://flag@db/app", Name: "-database-writer-url"}) {
+		!same(v, source.Value{Text: "postgres://flag@db/app", Path: validator.Field("-database-writer-url")}) {
 		t.Errorf("Lookup(writer) = %+v, %v, %v", v, ok, err)
 	}
 	pool := source.Key{
 		Env: "DATABASE_POOL_MAX_CONNS", File: []string{"database", "pool_max_conns"}, Flag: "database-pool-max-conns",
 	}
 	v, ok, err := src.Lookup(pool)
-	if err != nil || !ok || v != (source.Value{Text: "20", Name: "DATABASE_POOL_MAX_CONNS"}) {
+	if err != nil || !ok || !same(v, source.Value{Text: "20", Path: validator.Field("DATABASE_POOL_MAX_CONNS")}) {
 		t.Errorf("Lookup(pool) = %+v, %v, %v: a flag not set gives way to the environment", v, ok, err)
 	}
 }
@@ -131,7 +139,7 @@ func TestLookup_TheEnvironmentWinsOverFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v, ok, err := src.Lookup(key); err != nil || !ok || v.Name != "DATABASE_WRITER_URL" {
+	if v, ok, err := src.Lookup(key); err != nil || !ok || v.Path.String() != "DATABASE_WRITER_URL" {
 		t.Errorf("Lookup = %+v, %v, %v", v, ok, err)
 	}
 }
@@ -162,16 +170,24 @@ func TestLookup_Files(t *testing.T) {
 	}{
 		{
 			path: []string{"database", "writer_url"},
-			want: source.Value{Text: "postgres://base@db/app", Name: "database.writer_url"},
+			want: source.Value{Text: "postgres://base@db/app", Path: validator.Field("database", "writer_url")},
 			ok:   true,
 		},
 		{
 			path: []string{"database", "pool_max_conns"},
-			want: source.Value{Text: "30", Name: "database.pool_max_conns"},
+			want: source.Value{Text: "30", Path: validator.Field("database", "pool_max_conns")},
 			ok:   true,
 		},
-		{path: []string{"database", "debug"}, want: source.Value{Text: "true", Name: "database.debug"}, ok: true},
-		{path: []string{"database", "ratio"}, want: source.Value{Text: "0.5", Name: "database.ratio"}, ok: true},
+		{
+			path: []string{"database", "debug"},
+			want: source.Value{Text: "true", Path: validator.Field("database", "debug")},
+			ok:   true,
+		},
+		{
+			path: []string{"database", "ratio"},
+			want: source.Value{Text: "0.5", Path: validator.Field("database", "ratio")},
+			ok:   true,
+		},
 		{path: []string{"database", "missing"}},
 		{path: []string{"database", "none"}},
 		{path: []string{"other", "key"}},
@@ -179,29 +195,29 @@ func TestLookup_Files(t *testing.T) {
 		{path: nil},
 		{
 			path: []string{"database", "replica"},
-			want: source.Value{Name: "database.replica"},
+			want: source.Value{Path: validator.Field("database", "replica")},
 			err:  "is a section in " + base + ", where a value goes",
 		},
 		{
 			path: []string{"database", "hosts"},
-			want: source.Value{Name: "database.hosts"},
+			want: source.Value{Path: validator.Field("database", "hosts")},
 			err:  "is a list in " + base + ", where a value goes",
 		},
 		{
 			path: []string{"api", "port"},
-			want: source.Value{Name: "api.port"},
+			want: source.Value{Path: validator.Field("api", "port")},
 			err:  "api is a value in " + base + ", where a section goes",
 		},
 		{
 			path: []string{"database", "hosts", "first"},
-			want: source.Value{Name: "database.hosts.first"},
+			want: source.Value{Path: validator.Field("database", "hosts", "first")},
 			err:  "database.hosts is a list in " + base + ", where a section goes",
 		},
 	}
 	for _, tt := range tests {
 		v, ok, err := src.Lookup(source.Key{File: tt.path})
 		failed := err != nil && !strings.Contains(err.Error(), tt.err)
-		if v != tt.want || ok != tt.ok || (err == nil) != (tt.err == "") || failed {
+		if !same(v, tt.want) || ok != tt.ok || (err == nil) != (tt.err == "") || failed {
 			t.Errorf("Lookup(%q) = %+v, %v, %v, want %+v, %v, %q", tt.path, v, ok, err, tt.want, tt.ok, tt.err)
 		}
 	}
@@ -412,13 +428,13 @@ func TestUnknown(t *testing.T) {
 
 	got := src.Unknown("database", []string{"pool_max_conns", "writer_url"})
 	want := []source.Value{
-		{Name: "Database"},
-		{Text: "y", Name: "database.Writer_URL"},
-		{Name: "database.pool"},
-		{Text: "99", Name: "database.pool_max_con"},
-		{Text: "1s", Name: "database.dialTimeout"},
+		{Path: validator.Field("Database")},
+		{Text: "y", Path: validator.Field("database", "Writer_URL")},
+		{Path: validator.Field("database", "pool")},
+		{Text: "99", Path: validator.Field("database", "pool_max_con")},
+		{Text: "1s", Path: validator.Field("database", "dialTimeout")},
 	}
-	if !slices.Equal(got, want) {
+	if !slices.EqualFunc(got, want, same) {
 		t.Errorf("Unknown = %+v, want %+v", got, want)
 	}
 	if got := source.Env().Unknown("database", nil); got != nil {
@@ -430,13 +446,20 @@ func TestUnknownKey(t *testing.T) {
 	t.Parallel()
 
 	keys := []string{"pool_max_conns", "writer_url"}
-	for name, want := range map[string]string{
-		"database.pool_max_con": "is no setting of the section database",
-		"database.Writer_URL":   "is no setting of the section database; did you mean database.writer_url?",
-		"Database":              "names no section; did you mean database?",
+	for _, tt := range []struct {
+		path validator.Path
+		want string
+	}{
+		{validator.Field("database", "pool_max_con"), "is no setting of the section database"},
+		{
+			validator.Field("database", "Writer_URL"),
+			"is no setting of the section database; did you mean database.writer_url?",
+		},
+		{validator.Field("Database"), "names no section; did you mean database?"},
+		{validator.Field("database.writer_url"), "names no section; did you mean database?"},
 	} {
-		if got := source.UnknownKey(name, "database", keys).Error(); got != want {
-			t.Errorf("UnknownKey(%s) = %q, want %q", name, got, want)
+		if got := source.UnknownKey(tt.path, "database", keys).Error(); got != tt.want {
+			t.Errorf("UnknownKey(%s) = %q, want %q", tt.path, got, tt.want)
 		}
 	}
 }

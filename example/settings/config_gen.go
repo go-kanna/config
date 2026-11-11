@@ -30,46 +30,46 @@ func LoadServer(src source.Source) (Server, error) {
 	)
 
 	x.Port = 8080
-	namePort := "PORT"
+	pathPort := validator.Field("PORT")
 	if v, ok, err := src.Lookup(source.Key{Env: "PORT", File: []string{"server", "port"}, Flag: "server-port"}); err != nil {
-		errs.Add(validator.Field(v.Name), err)
+		errs.Add(v.Path, err)
 	} else if ok {
-		namePort = v.Name
+		pathPort = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
-			errs.Add(validator.Field(namePort), validator.FailWith("invalid", map[string]any{"type": "int"}))
+			errs.Add(pathPort, validator.FailWith("invalid", map[string]any{"type": "int"}))
 		} else {
 			x.Port = int(n)
 		}
 	}
 
 	x.Timeout = 5 * time.Second
-	nameTimeout := "SERVER_TIMEOUT"
+	pathTimeout := validator.Field("SERVER_TIMEOUT")
 	if v, ok, err := src.Lookup(source.Key{Env: "SERVER_TIMEOUT", File: []string{"server", "timeout"}, Flag: "server-timeout"}); err != nil {
-		errs.Add(validator.Field(v.Name), err)
+		errs.Add(v.Path, err)
 	} else if ok {
-		nameTimeout = v.Name
+		pathTimeout = v.Path
 		if d, err := time.ParseDuration(v.Text); err != nil {
-			errs.Add(validator.Field(nameTimeout), validator.FailWith("invalid", map[string]any{"type": "time.Duration"}))
+			errs.Add(pathTimeout, validator.FailWith("invalid", map[string]any{"type": "time.Duration"}))
 		} else {
 			x.Timeout = d
 		}
 	}
 
-	nameLevel := "SERVER_LEVEL"
+	pathLevel := validator.Field("SERVER_LEVEL")
 	if v, ok, err := src.Lookup(source.Key{Env: "SERVER_LEVEL", File: []string{"server", "level"}, Flag: "server-level"}); err != nil {
-		errs.Add(validator.Field(v.Name), err)
+		errs.Add(v.Path, err)
 	} else if ok {
-		nameLevel = v.Name
+		pathLevel = v.Path
 		var u slog.Level
 		if err := u.UnmarshalText([]byte(v.Text)); err != nil {
-			errs.Add(validator.Field(nameLevel), source.Coded(err, "slog.Level"))
+			errs.Add(pathLevel, source.Coded(err, "slog.Level"))
 		} else {
 			x.Level = u
 		}
 	} else {
 		var u slog.Level
 		if err := u.UnmarshalText([]byte("info")); err != nil {
-			errs.Add(validator.Field(nameLevel), source.Default(source.Coded(err, "slog.Level")))
+			errs.Add(pathLevel, source.Default(source.Coded(err, "slog.Level")))
 		} else {
 			x.Level = u
 		}
@@ -77,7 +77,7 @@ func LoadServer(src source.Source) (Server, error) {
 
 	keys := []string{"level", "port", "timeout"}
 	for _, v := range src.Unknown("server", keys) {
-		errs.Add(validator.Field(v.Name), source.UnknownKey(v.Name, "server", keys))
+		errs.Add(v.Path, source.UnknownKey(v.Path, "server", keys))
 	}
 
 	if len(errs) > 0 {
@@ -85,10 +85,10 @@ func LoadServer(src source.Source) (Server, error) {
 	}
 
 	if x.Port < 1 {
-		errs.Add(validator.Field(namePort), validator.GreaterThanOrEqualTo(1))
+		errs.Add(pathPort, validator.GreaterThanOrEqualTo(1))
 	}
 	if x.Port > 65535 {
-		errs.Add(validator.Field(namePort), validator.LessThanOrEqualTo(65535))
+		errs.Add(pathPort, validator.LessThanOrEqualTo(65535))
 	}
 
 	if len(errs) > 0 {
@@ -113,22 +113,22 @@ func LoadDatabase(src source.Source) (Database, error) {
 		errs validator.Errors
 	)
 
-	nameWriterURL := "DATABASE_WRITER_URL"
+	pathWriterURL := validator.Field("DATABASE_WRITER_URL")
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_WRITER_URL", File: []string{"database", "writer_url"}, Flag: "database-writer-url"}); err != nil {
-		errs.Add(validator.Field(v.Name), err)
+		errs.Add(v.Path, err)
 	} else if ok {
-		nameWriterURL = v.Name
+		pathWriterURL = v.Path
 		x.WriterURL = v.Text
 	}
 
 	x.PoolMaxConns = 10
-	namePoolMaxConns := "DATABASE_POOL_MAX_CONNS"
+	pathPoolMaxConns := validator.Field("DATABASE_POOL_MAX_CONNS")
 	if v, ok, err := src.Lookup(source.Key{Env: "DATABASE_POOL_MAX_CONNS", File: []string{"database", "pool_max_conns"}, Flag: "database-pool-max-conns"}); err != nil {
-		errs.Add(validator.Field(v.Name), err)
+		errs.Add(v.Path, err)
 	} else if ok {
-		namePoolMaxConns = v.Name
+		pathPoolMaxConns = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
-			errs.Add(validator.Field(namePoolMaxConns), validator.FailWith("invalid", map[string]any{"type": "int32"}))
+			errs.Add(pathPoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
@@ -136,7 +136,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 
 	keys := []string{"pool_max_conns", "writer_url"}
 	for _, v := range src.Unknown("database", keys) {
-		errs.Add(validator.Field(v.Name), source.UnknownKey(v.Name, "database", keys))
+		errs.Add(v.Path, source.UnknownKey(v.Path, "database", keys))
 	}
 
 	if len(errs) > 0 {
@@ -144,11 +144,11 @@ func LoadDatabase(src source.Source) (Database, error) {
 	}
 
 	if x.WriterURL == "" {
-		errs.Add(validator.Field(nameWriterURL), validator.Blank())
+		errs.Add(pathWriterURL, validator.Blank())
 	}
 
 	if x.PoolMaxConns < 1 {
-		errs.Add(validator.Field(namePoolMaxConns), validator.GreaterThanOrEqualTo[int32](1))
+		errs.Add(pathPoolMaxConns, validator.GreaterThanOrEqualTo[int32](1))
 	}
 
 	if len(errs) > 0 {
