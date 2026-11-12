@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -386,6 +387,10 @@ func TestCoded(t *testing.T) {
 	coded, ok := errors.AsType[validator.Coded](got)
 	if !ok || coded.Code() != "invalid" || coded.Params()["type"] != "slog.Level" || strings.Contains(got.Error(), `"x"`) {
 		t.Errorf("Coded(plain) = %q, want invalid naming the type, not the value", got.Error())
+	}
+	_, err := strconv.ParseInt("08080", 0, 32)
+	if got, want := source.Coded(err, "int32").Error(), "validator: invalid (octal=true, type=int32)"; got != want {
+		t.Errorf("Coded(08080) = %q, want %q", got, want)
 	}
 }
 

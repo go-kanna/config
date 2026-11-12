@@ -59,7 +59,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 	} else if ok {
 		pathPoolMaxConns = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
-			errs.Add(pathPoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
+			errs.Add(pathPoolMaxConns, source.Coded(err, "int32"))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
@@ -109,7 +109,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 	} else if ok {
 		pathRetries = v.Path
 		if n, err := strconv.ParseUint(v.Text, 0, 8); err != nil {
-			errs.Add(pathRetries, validator.FailWith("invalid", map[string]any{"type": "uint8"}))
+			errs.Add(pathRetries, source.Coded(err, "uint8"))
 		} else {
 			x.Retries = uint8(n)
 		}
@@ -216,7 +216,7 @@ func LoadAPI(src source.Source) (API, error) {
 	} else if ok {
 		pathPort = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
-			errs.Add(pathPort, validator.FailWith("invalid", map[string]any{"type": "int"}))
+			errs.Add(pathPort, source.Coded(err, "int"))
 		} else {
 			x.Port = int(n)
 		}
@@ -253,7 +253,7 @@ func LoadAPI(src source.Source) (API, error) {
 	} else if ok {
 		pathPublic = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
-			errs.Add(pathPublic, validator.FailWith("invalid", map[string]any{"type": "Port"}))
+			errs.Add(pathPublic, source.Coded(err, "Port"))
 		} else if o, err := NewPort(int(n)); err != nil {
 			errs.Add(pathPublic, source.Coded(err, "Port"))
 		} else {
@@ -525,7 +525,7 @@ func LoadUpload(src source.Source) (Upload, error) {
 	} else if ok {
 		pathDirMode = v.Path
 		if n, err := strconv.ParseUint(v.Text, 0, 32); err != nil {
-			errs.Add(pathDirMode, validator.FailWith("invalid", map[string]any{"type": "fs.FileMode"}))
+			errs.Add(pathDirMode, source.Coded(err, "fs.FileMode"))
 		} else {
 			x.DirMode = fs.FileMode(n)
 		}
@@ -538,7 +538,7 @@ func LoadUpload(src source.Source) (Upload, error) {
 	} else if ok {
 		pathOffset = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 16); err != nil {
-			errs.Add(pathOffset, validator.FailWith("invalid", map[string]any{"type": "int16"}))
+			errs.Add(pathOffset, source.Coded(err, "int16"))
 		} else {
 			x.Offset = int16(n)
 		}
@@ -616,7 +616,7 @@ func LoadFallback(src source.Source) (Fallback, error) {
 	} else if ok {
 		pathPublic = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
-			errs.Add(pathPublic, validator.FailWith("invalid", map[string]any{"type": "Port"}))
+			errs.Add(pathPublic, source.Coded(err, "Port"))
 		} else if o, err := NewPort(int(n)); err != nil {
 			errs.Add(pathPublic, source.Coded(err, "Port"))
 		} else {
@@ -624,7 +624,7 @@ func LoadFallback(src source.Source) (Fallback, error) {
 		}
 	} else {
 		if n, err := strconv.ParseInt("port", 0, 0); err != nil {
-			errs.Add(pathPublic, source.Default(validator.FailWith("invalid", map[string]any{"type": "Port"})))
+			errs.Add(pathPublic, source.Default(source.Coded(err, "Port")))
 		} else if o, err := NewPort(int(n)); err != nil {
 			errs.Add(pathPublic, source.Default(source.Coded(err, "Port")))
 		} else {

@@ -17,6 +17,8 @@ import (
 	"github.com/go-kanna/internal/scan"
 	"github.com/go-kanna/internal/suggest"
 	"github.com/go-kanna/internal/validation"
+
+	"github.com/go-kanna/config/internal/octal"
 )
 
 const (
@@ -287,8 +289,14 @@ func defaultOf(fset *token.FileSet, r reader, text string, s scan.Struct) (*defa
 	if !r.staticDefault() {
 		return def, ""
 	}
-	bad := func() (*defaultValue, string) {
-		return nil, "the default " + strconv.Quote(text) + " is not " + article(typeString(r.typ, s))
+	bad := func() string {
+		return "the default " + strconv.Quote(text) + " is not " + article(typeString(r.typ, s))
+	}
+	badInt := func(err error) string {
+		if octal.Misread(err) {
+			return bad() + "; a leading 0 makes it octal"
+		}
+		return bad()
 	}
 	switch r.kind {
 	case readText:
@@ -296,25 +304,25 @@ func defaultOf(fset *token.FileSet, r reader, text string, s scan.Struct) (*defa
 	case readBool:
 		b, err := strconv.ParseBool(text)
 		if err != nil {
-			return bad()
+			return nil, bad()
 		}
 		def.value, def.lit = constant.MakeBool(b), strconv.FormatBool(b)
 	case readInt:
 		n, err := strconv.ParseInt(text, 0, bitsOr(r.bits))
 		if err != nil {
-			return bad()
+			return nil, badInt(err)
 		}
 		def.value, def.lit = constant.MakeInt64(n), text
 	case readUint:
 		n, err := strconv.ParseUint(text, 0, bitsOr(r.bits))
 		if err != nil {
-			return bad()
+			return nil, badInt(err)
 		}
 		def.value, def.lit = constant.MakeUint64(n), text
 	case readFloat:
 		n, err := strconv.ParseFloat(text, r.bits)
 		if err != nil {
-			return bad()
+			return nil, bad()
 		}
 		switch {
 		case math.IsNaN(n):
@@ -329,7 +337,7 @@ func defaultOf(fset *token.FileSet, r reader, text string, s scan.Struct) (*defa
 	case readDuration:
 		d, err := time.ParseDuration(text)
 		if err != nil {
-			return bad()
+			return nil, bad()
 		}
 		def.value, def.dur = constant.MakeInt64(int64(d)), d
 	case readEnum:

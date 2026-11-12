@@ -256,7 +256,7 @@ func (l *loader) read(r reader, text, name, typeName string, assign func(string)
 		return fmt.Sprintf("%s.Add(%s, %s)\n", l.errs, name,
 			l.fail(fmt.Sprintf("%s.FailWith(\"invalid\", map[string]any{\"type\": %q})", l.w.Runtime(), typeName)))
 	}
-	parse := func(local, call string, convert bool) string {
+	parse := func(local, call string, convert bool, invalid func() string) string {
 		value := local
 		if convert {
 			value = l.convert(r.typ, local)
@@ -270,6 +270,10 @@ func (l *loader) read(r reader, text, name, typeName string, assign func(string)
 		return fmt.Sprintf("if %s, %s := %s; %s != nil {\n%s} else {\n%s}\n",
 			local, l.locals["err"], call, l.locals["err"], invalid(), next)
 	}
+	// coded tells an integer that a leading 0 made octal.
+	coded := func() string {
+		return fmt.Sprintf("%s.Add(%s, %s)\n", l.errs, name, l.coded(l.locals["err"], typeName))
+	}
 	strconvPkg := func() string { return l.f.Import("strconv", "strconv") }
 
 	switch r.kind {
@@ -279,18 +283,18 @@ func (l *loader) read(r reader, text, name, typeName string, assign func(string)
 		}
 		return assign(l.convert(r.typ, text))
 	case readBool:
-		return parse(l.locals["b"], fmt.Sprintf("%s.ParseBool(%s)", strconvPkg(), text), !l.is(r.typ, types.Bool))
+		return parse(l.locals["b"], fmt.Sprintf("%s.ParseBool(%s)", strconvPkg(), text), !l.is(r.typ, types.Bool), invalid)
 	case readInt:
 		call := fmt.Sprintf("%s.ParseInt(%s, 0, %d)", strconvPkg(), text, r.bits)
-		return parse(l.locals["n"], call, !l.is(r.typ, types.Int64))
+		return parse(l.locals["n"], call, !l.is(r.typ, types.Int64), coded)
 	case readUint:
 		call := fmt.Sprintf("%s.ParseUint(%s, 0, %d)", strconvPkg(), text, r.bits)
-		return parse(l.locals["n"], call, !l.is(r.typ, types.Uint64))
+		return parse(l.locals["n"], call, !l.is(r.typ, types.Uint64), coded)
 	case readFloat:
 		call := fmt.Sprintf("%s.ParseFloat(%s, %d)", strconvPkg(), text, r.bits)
-		return parse(l.locals["n"], call, !l.is(r.typ, types.Float64))
+		return parse(l.locals["n"], call, !l.is(r.typ, types.Float64), invalid)
 	case readDuration:
-		return parse(l.locals["d"], fmt.Sprintf("%s.ParseDuration(%s)", l.f.Import("time", "time"), text), false)
+		return parse(l.locals["d"], fmt.Sprintf("%s.ParseDuration(%s)", l.f.Import("time", "time"), text), false, invalid)
 	case readEnum:
 		return l.construct(l.locals["e"], r.ctor, text, name, typeName, assign)
 	case readValue:
