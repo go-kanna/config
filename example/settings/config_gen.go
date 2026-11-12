@@ -36,7 +36,7 @@ func LoadServer(src source.Source) (Server, error) {
 	} else if ok {
 		pathPort = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
-			errs.Add(pathPort, validator.FailWith("invalid", map[string]any{"type": "int"}))
+			errs.Add(pathPort, source.Coded(err, "int"))
 		} else {
 			x.Port = int(n)
 		}
@@ -128,7 +128,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 	} else if ok {
 		pathPoolMaxConns = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
-			errs.Add(pathPoolMaxConns, validator.FailWith("invalid", map[string]any{"type": "int32"}))
+			errs.Add(pathPoolMaxConns, source.Coded(err, "int32"))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}

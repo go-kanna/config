@@ -342,14 +342,28 @@ func TestGenerated_IntegerLiterals(t *testing.T) {
 		}
 	}
 
-	for _, text := range []string{"08", "0x", "1__000", "_1", "0x1_", "-1", "0x100000000"} {
+	for _, text := range []string{"0x", "1__000", "_1", "0x1_", "-1", "0x100000000", "0755x", "0_8"} {
 		t.Setenv("UPLOAD_DIR_MODE", text)
 		_, err := emit.LoadUpload(source.Env())
 		if got, want := errString(err), "validator: UPLOAD_DIR_MODE: invalid (type=fs.FileMode)"; got != want {
 			t.Errorf("LoadUpload error of %q = %q, want %q", text, got, want)
 		}
 	}
+	// A leading 0 that makes a decimal octal is told, without the value.
+	for _, text := range []string{"08", "08080", "0099999999999999999999"} {
+		t.Setenv("UPLOAD_DIR_MODE", text)
+		_, err := emit.LoadUpload(source.Env())
+		if got, want := errString(err), "validator: UPLOAD_DIR_MODE: invalid (octal=true, type=fs.FileMode)"; got != want {
+			t.Errorf("LoadUpload error of %q = %q, want %q", text, got, want)
+		}
+	}
 	t.Setenv("UPLOAD_DIR_MODE", "")
+	t.Setenv("UPLOAD_OFFSET", "-09")
+	_, err = emit.LoadUpload(source.Env())
+	if got, want := errString(err), "validator: UPLOAD_OFFSET: invalid (octal=true, type=int16)"; got != want {
+		t.Errorf("LoadUpload error of -09 = %q, want %q", got, want)
+	}
+	t.Setenv("UPLOAD_OFFSET", "")
 
 	path := filepath.Join(t.TempDir(), "settings.json")
 	if err := os.WriteFile(path, []byte(`{"upload": {"dir_mode": "0700"}}`), 0o600); err != nil {

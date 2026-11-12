@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"github.com/go-kanna/validator"
+
+	"github.com/go-kanna/config/internal/octal"
 )
 
 // Key names one setting in each place it may be found.
@@ -323,14 +325,19 @@ func (v *flagValue) IsBoolFlag() bool {
 }
 
 // Coded is for the generated LoadX, not to be called by hand. It returns err,
-// which a constructor or an UnmarshalText returned for the text of a setting,
-// when it carries a code, and otherwise invalid naming typ: the text of err may
-// hold the value, which a setting may keep secret.
+// which reading the text of a setting returned, when it carries a code, and
+// otherwise invalid naming typ: the text of err may hold the value, which a
+// setting may keep secret. An integer that a leading 0 made octal, which reads
+// as a decimal, gets octal=true besides.
 func Coded(err error, typ string) error {
 	if _, ok := errors.AsType[validator.Coded](err); ok {
 		return err
 	}
-	return validator.FailWith("invalid", map[string]any{"type": typ})
+	p := map[string]any{"type": typ}
+	if octal.Misread(err) {
+		p["octal"] = true
+	}
+	return validator.FailWith("invalid", p)
 }
 
 // UnknownKey is for the generated LoadX, not to be called by hand. It returns
