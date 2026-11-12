@@ -146,6 +146,13 @@ type OAuth struct {
 
 フラグは `flag` パッケージのもので、`DefineXFlags` がプログラムのパースする `FlagSet` に定義します。`source.Open` の前にパースしてください。まだパースしていない `FlagSet` は `source.Open` が誤りにします。使うのは設定されたフラグだけです。bool のフラグは `-database-debug` のように単独で書けます。
 
+`-h` が出すフラグの説明は、フィールドの doc コメントの 1 文目（`go/doc` が切り出すもの）に、環境変数の名前を続けたものです。doc コメントがなければ、`Server.Level (SERVER_LEVEL)` のように構造体とフィールドの名前になります。doc コメントのバッククォートは外します。`flag` パッケージは、バッククォートで囲んだ語をフラグの型の欄に出すからです。型の欄は、`flag.Var` で定義したほかのフラグと同じく `value` です。
+
+```
+  -server-port value
+    	Port is the port the server listens on. (PORT) (default 8080)
+```
+
 ## ファイル
 
 ファイルは `source.File` の `Decode` が読みます。`source.JSON`、`github.com/go-kanna/config/yaml` の `yaml.Decode`、`github.com/go-kanna/config/toml` の `toml.Decode` です。kanna-config はファイルを探さず、環境も見分けません。ファイルはプログラムが勝つ順（後ろのものが前のものに勝つ）に名指し、ないファイルは誤りです。

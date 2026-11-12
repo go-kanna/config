@@ -149,6 +149,13 @@ A variable may hold, rather than the value, the path of a file holding it, as Ku
 
 Flags are those of the `flag` package, defined by `DefineXFlags` on a `FlagSet` the program parses before `source.Open`, which rejects one not parsed yet; only the flags set count. A bool flag may stand alone, as `-database-debug`.
 
+The help of a flag, which `-h` prints, is the first sentence of the field's doc comment, as `go/doc` finds it, followed by the variable. Without a doc comment, it names the struct and the field, as in `Server.Level (SERVER_LEVEL)`. A back quote in the doc comment is dropped, since the `flag` package would show the word it quotes as the type of the flag. The type shows as `value`, as for any flag that `flag.Var` defines:
+
+```
+  -server-port value
+    	Port is the port the server listens on. (PORT) (default 8080)
+```
+
 ## Files
 
 A file is read by the `Decode` of its `source.File`: `source.JSON`, `yaml.Decode` of `github.com/go-kanna/config/yaml`, or `toml.Decode` of `github.com/go-kanna/config/toml`. kanna-config does not look for files, nor tell environments apart: the program names the files, in the order they win, a later over an earlier, and a file that is not there is an error.

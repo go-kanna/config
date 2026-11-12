@@ -14,8 +14,8 @@ import (
 
 // DefineServerFlags defines on fs the flags that LoadServer reads Server from.
 func DefineServerFlags(fs *flag.FlagSet) {
-	source.DefineFlag(fs, "server-port", "Server.Port (PORT)", "8080", false)
-	source.DefineFlag(fs, "server-timeout", "Server.Timeout (SERVER_TIMEOUT)", "5s", false)
+	source.DefineFlag(fs, "server-port", "Port is the port the server listens on. (PORT)", "8080", false)
+	source.DefineFlag(fs, "server-timeout", "Timeout bounds the time a request takes. (SERVER_TIMEOUT)", "5s", false)
 	source.DefineFlag(fs, "server-level", "Server.Level (SERVER_LEVEL)", "info", false)
 }
 
