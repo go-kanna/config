@@ -14,7 +14,10 @@ import (
 //
 //kanna:config
 type Server struct {
-	Port    int           `default:"8080" env:"PORT" validate:"gte=1,lte=65535"`
+	// Port is the port the server listens on. The help of its flag, -h,
+	// shows this first sentence.
+	Port int `default:"8080" env:"PORT" validate:"gte=1,lte=65535"`
+	// Timeout bounds the time a request takes.
 	Timeout time.Duration `default:"5s"`
 	Level   slog.Level    `default:"info"`
 }

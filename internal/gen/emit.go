@@ -110,6 +110,9 @@ func (e *emitter) define(t target) {
 			def = fd.def.text
 		}
 		usage := fmt.Sprintf("%s.%s (%s)", t.Name, fd.Name, fd.key.env)
+		if fd.usage != "" {
+			usage = fmt.Sprintf("%s (%s)", fd.usage, fd.key.env)
+		}
 		e.printf("%s.DefineFlag(%s, %q, %q, %q, %t)\n", e.src, fs, fd.key.flag, usage, def, fd.read.kind == readBool)
 	}
 	e.printf("}\n\n")

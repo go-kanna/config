@@ -1,7 +1,9 @@
 package gen
 
 import (
+	"go/ast"
 	"go/constant"
+	"go/doc"
 	"go/token"
 	"go/types"
 	"math"
@@ -78,6 +80,10 @@ type field struct {
 	key  key
 	read reader
 
+	// usage is the first sentence of its doc comment, which the help of its
+	// flag shows, or "".
+	usage string
+
 	// def is the default, when the field has one.
 	def *defaultValue
 
@@ -153,6 +159,7 @@ func plan(
 	for _, f := range checked {
 		checks[f.Name] = f.Value
 	}
+	usages := fieldUsages(fset, s)
 	for _, f := range s.Fields {
 		fd, ds := fieldOf(fset, s, prefix, f)
 		diags = append(diags, ds...)
@@ -163,6 +170,7 @@ func plan(
 			}
 			continue
 		}
+		fd.usage = usages[f.Pos]
 		fd.checks = checks[f.Name]
 		fd.path, _ = validation.JSONName(f)
 		if fd.def != nil && fd.def.value != nil {
@@ -188,6 +196,24 @@ func plan(
 func hasValidate(fset *token.FileSet, s scan.Struct) bool {
 	d, _ := directive.Find(fset, s.Doc, validation.DirectiveKey)
 	return d.Found
+}
+
+// fieldUsages returns the first sentence of the doc comment of each field in
+// the file declaring s that has one, by where its name is declared. A back
+// quote is left out: the help of a flag takes the word it quotes for the type
+// of the flag.
+func fieldUsages(fset *token.FileSet, s scan.Struct) map[token.Position]string {
+	usages := make(map[token.Position]string)
+	ast.Inspect(s.File, func(n ast.Node) bool {
+		if f, ok := n.(*ast.Field); ok && f.Doc != nil {
+			usage := strings.ReplaceAll(new(doc.Package).Synopsis(f.Doc.Text()), "`", "")
+			for _, name := range f.Names {
+				usages[fset.Position(name.Pos())] = usage
+			}
+		}
+		return true
+	})
+	return usages
 }
 
 // fieldOf works out how f of s, under prefix, is read, or returns nil for a

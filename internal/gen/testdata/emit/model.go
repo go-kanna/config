@@ -59,14 +59,17 @@ type DSN string
 
 //kanna:config
 type Database struct {
-	AdminURL     string
-	WriterURL    DSN           `validate:"required"`
-	PoolMaxConns int32         `default:"10" validate:"gte=1"`
-	DialTimeout  time.Duration `default:"5s"`
-	Ratio        float32       `default:"0.5"`
-	Debug        bool
-	Retries      uint8
-	Password     string `config:"-"`
+	AdminURL  string
+	WriterURL DSN `validate:"required"`
+	// PoolMaxConns caps the connections of the pool. The help of its flag
+	// shows this first sentence alone.
+	PoolMaxConns int32 `default:"10" validate:"gte=1"`
+	// DialTimeout is how long a `dial` waits.
+	DialTimeout time.Duration `default:"5s"`
+	Ratio       float32       `default:"0.5"`
+	Debug       bool
+	Retries     uint8
+	Password    string `config:"-"`
 }
 
 //kanna:config prefix=oauth
@@ -77,6 +80,7 @@ type OAuth struct {
 
 //kanna:config
 type API struct {
+	// Port is the port the HTTP server listens on.
 	Port   int  `env:"PORT" default:"8080" validate:"gte=1,lte=65535"`
 	Mode   Mode `default:"fast"`
 	Admin  Email

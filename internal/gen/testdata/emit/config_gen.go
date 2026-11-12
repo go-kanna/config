@@ -21,8 +21,8 @@ import (
 func DefineDatabaseFlags(fs2 *flag.FlagSet) {
 	source.DefineFlag(fs2, "database-admin-url", "Database.AdminURL (DATABASE_ADMIN_URL)", "", false)
 	source.DefineFlag(fs2, "database-writer-url", "Database.WriterURL (DATABASE_WRITER_URL)", "", false)
-	source.DefineFlag(fs2, "database-pool-max-conns", "Database.PoolMaxConns (DATABASE_POOL_MAX_CONNS)", "10", false)
-	source.DefineFlag(fs2, "database-dial-timeout", "Database.DialTimeout (DATABASE_DIAL_TIMEOUT)", "5s", false)
+	source.DefineFlag(fs2, "database-pool-max-conns", "PoolMaxConns caps the connections of the pool. (DATABASE_POOL_MAX_CONNS)", "10", false)
+	source.DefineFlag(fs2, "database-dial-timeout", "DialTimeout is how long a dial waits. (DATABASE_DIAL_TIMEOUT)", "5s", false)
 	source.DefineFlag(fs2, "database-ratio", "Database.Ratio (DATABASE_RATIO)", "0.5", false)
 	source.DefineFlag(fs2, "database-debug", "Database.Debug (DATABASE_DEBUG)", "", true)
 	source.DefineFlag(fs2, "database-retries", "Database.Retries (DATABASE_RETRIES)", "", false)
@@ -189,7 +189,7 @@ func LoadOAuth(src source.Source) (OAuth, error) {
 
 // DefineAPIFlags defines on fs2 the flags that LoadAPI reads API from.
 func DefineAPIFlags(fs2 *flag.FlagSet) {
-	source.DefineFlag(fs2, "api-port", "API.Port (PORT)", "8080", false)
+	source.DefineFlag(fs2, "api-port", "Port is the port the HTTP server listens on. (PORT)", "8080", false)
 	source.DefineFlag(fs2, "api-mode", "API.Mode (API_MODE)", "fast", false)
 	source.DefineFlag(fs2, "api-admin", "API.Admin (API_ADMIN)", "", false)
 	source.DefineFlag(fs2, "api-public", "API.Public (API_PUBLIC)", "", false)

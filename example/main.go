@@ -20,6 +20,7 @@ var variables = []string{"PORT", "SERVER_TIMEOUT", "SERVER_LEVEL", "DATABASE_WRI
 
 func main() {
 	unset()
+	show("The help of the flags", []string{"-h"})
 	settingsYAML := source.File{Path: "settings.yaml", Decode: yaml.Decode}
 	show("settings.yaml", nil, settingsYAML)
 	show("settings.toml", nil, source.File{Path: "settings.toml", Decode: toml.Decode})
@@ -47,6 +48,7 @@ func unset() {
 func show(title string, args []string, files ...source.File) {
 	fmt.Fprintf(os.Stdout, "=== %s ===\n", title)
 	fs := flag.NewFlagSet("example", flag.ContinueOnError)
+	fs.SetOutput(os.Stdout)
 	settings.DefineServerFlags(fs)
 	settings.DefineDatabaseFlags(fs)
 	if err := fs.Parse(args); err != nil {
