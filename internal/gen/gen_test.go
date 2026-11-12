@@ -126,8 +126,7 @@ func TestCommand_Misplaced(t *testing.T) {
 		"//kanna:config\nfunc Load() {}\n\n" +
 		"//kanna:config\nvar Port int\n"})
 	code, stderr := run(t, dir)
-	want := "./app.go:3:1: error: //kanna:config marks a struct type, not a type other than a struct or an interface, " +
-		"so nothing reads it\n" +
+	want := "./app.go:3:1: error: //kanna:config marks a struct type, not a string type, so nothing reads it\n" +
 		"  write it right above a struct type\n" +
 		"./app.go:6:1: error: //kanna:config marks a struct type, not a type alias, so nothing reads it\n" +
 		"  write it right above a struct type\n" +
