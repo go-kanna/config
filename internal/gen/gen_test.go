@@ -173,3 +173,27 @@ func TestCommand_Deps(t *testing.T) {
 		}
 	}
 }
+
+// A field type whose methods another generator has yet to write leaves where
+// the run writes as it is.
+func TestCommand_DepsBeforeTypesResolve(t *testing.T) {
+	t.Parallel()
+
+	dir := writeModule(t, map[string]string{
+		"model/model.go": "package model\n\ntype Email struct{ s string }\n",
+		"app.go": "package app\n\nimport \"example.com/app/model\"\n\n" +
+			"//kanna:config\ntype API struct {\n\tAdmin model.Email\n}\n",
+	})
+	if code, _ := run(t, dir); code == cli.ExitOK {
+		t.Fatal("run passes, though model.Email cannot be read")
+	}
+	var stdout, stderr bytes.Buffer
+	if code := gen.Command().Exec(cli.Env{Out: &stdout, Err: &stderr, Dir: dir}, []string{"-deps"}); code != cli.ExitOK {
+		t.Fatalf("-deps = %d, stderr %q", code, stderr.String())
+	}
+	for _, want := range []string{`"example.com/app.LoadAPI"`, `"example.com/app.DefineAPIFlags"`, "config_gen.go"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Errorf("-deps does not report %s:\n%s", want, stdout.String())
+		}
+	}
+}
