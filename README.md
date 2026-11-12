@@ -113,6 +113,12 @@ With `DATABASE_WRITER_URL` unset and `pool_max_conns: 0` in the file, `LoadDatab
 validator: DATABASE_WRITER_URL: blank; database.pool_max_conns: greater_than_or_equal_to (count=1)
 ```
 
+`Database.AdminURL` is read from `DATABASE_ADMIN_URL`, a different variable from the `DATABASE_URL` that `kanna-orm describe` reads when it is given no `-database-url`. To describe with the admin connection, pass the variable by the flag:
+
+```sh
+go tool kanna-orm describe -database-url "$DATABASE_ADMIN_URL" ./...
+```
+
 ## Names
 
 Each field is one setting, named by words: those of the struct, then those of the field, split as kanna-orm splits a field into the name of its column. Each source spells the words its own way:
