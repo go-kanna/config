@@ -25,7 +25,7 @@ reads. A YAML or a TOML file is read by a module of its own, which only a progra
 go get github.com/go-kanna/config/yaml   # or github.com/go-kanna/config/toml
 ```
 
-## Usage
+## Use
 
 Mark a struct of settings `//kanna:config`:
 
