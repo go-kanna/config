@@ -13,19 +13,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-kanna/config/impl"
 	"github.com/go-kanna/config/source"
 	"github.com/go-kanna/validator"
 )
 
 // DefineDatabaseFlags defines on fs2 the flags that LoadDatabase reads Database from.
 func DefineDatabaseFlags(fs2 *flag.FlagSet) {
-	source.DefineFlag(fs2, "database-admin-url", "Database.AdminURL (DATABASE_ADMIN_URL)", "", false)
-	source.DefineFlag(fs2, "database-writer-url", "Database.WriterURL (DATABASE_WRITER_URL)", "", false)
-	source.DefineFlag(fs2, "database-pool-max-conns", "PoolMaxConns caps the connections of the pool. (DATABASE_POOL_MAX_CONNS)", "10", false)
-	source.DefineFlag(fs2, "database-dial-timeout", "DialTimeout is how long a dial waits. (DATABASE_DIAL_TIMEOUT)", "5s", false)
-	source.DefineFlag(fs2, "database-ratio", "Database.Ratio (DATABASE_RATIO)", "0.5", false)
-	source.DefineFlag(fs2, "database-debug", "Database.Debug (DATABASE_DEBUG)", "", true)
-	source.DefineFlag(fs2, "database-retries", "Database.Retries (DATABASE_RETRIES)", "", false)
+	impl.DefineFlag(fs2, "database-admin-url", "Database.AdminURL (DATABASE_ADMIN_URL)", "", false)
+	impl.DefineFlag(fs2, "database-writer-url", "Database.WriterURL (DATABASE_WRITER_URL)", "", false)
+	impl.DefineFlag(fs2, "database-pool-max-conns", "PoolMaxConns caps the connections of the pool. (DATABASE_POOL_MAX_CONNS)", "10", false)
+	impl.DefineFlag(fs2, "database-dial-timeout", "DialTimeout is how long a dial waits. (DATABASE_DIAL_TIMEOUT)", "5s", false)
+	impl.DefineFlag(fs2, "database-ratio", "Database.Ratio (DATABASE_RATIO)", "0.5", false)
+	impl.DefineFlag(fs2, "database-debug", "Database.Debug (DATABASE_DEBUG)", "", true)
+	impl.DefineFlag(fs2, "database-retries", "Database.Retries (DATABASE_RETRIES)", "", false)
 }
 
 // LoadDatabase reads Database from src, and checks it by its validate tags.
@@ -59,7 +60,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 	} else if ok {
 		pathPoolMaxConns = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
-			errs.Add(pathPoolMaxConns, source.Coded(err, "int32"))
+			errs.Add(pathPoolMaxConns, impl.Coded(err, "int32"))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
@@ -109,7 +110,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 	} else if ok {
 		pathRetries = v.Path
 		if n, err := strconv.ParseUint(v.Text, 0, 8); err != nil {
-			errs.Add(pathRetries, source.Coded(err, "uint8"))
+			errs.Add(pathRetries, impl.Coded(err, "uint8"))
 		} else {
 			x.Retries = uint8(n)
 		}
@@ -117,7 +118,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 
 	keys := []string{"admin_url", "debug", "dial_timeout", "pool_max_conns", "ratio", "replica_url", "retries", "writer_url"}
 	for _, v := range src.Unknown("database", keys) {
-		errs.Add(v.Path, source.UnknownKey(v.Path, "database", keys))
+		errs.Add(v.Path, impl.UnknownKey(v.Path, "database", keys))
 	}
 
 	if len(errs) > 0 {
@@ -140,8 +141,8 @@ func LoadDatabase(src source.Source) (Database, error) {
 
 // DefineOAuthFlags defines on fs2 the flags that LoadOAuth reads OAuth from.
 func DefineOAuthFlags(fs2 *flag.FlagSet) {
-	source.DefineFlag(fs2, "oauth-client-id", "OAuth.ClientID (OAUTH_CLIENT_ID)", "", false)
-	source.DefineFlag(fs2, "oauth-token", "OAuth.AuthToken (OAUTH_TOKEN)", "", false)
+	impl.DefineFlag(fs2, "oauth-client-id", "OAuth.ClientID (OAUTH_CLIENT_ID)", "", false)
+	impl.DefineFlag(fs2, "oauth-token", "OAuth.AuthToken (OAUTH_TOKEN)", "", false)
 }
 
 // LoadOAuth reads OAuth from src, and checks it by its validate tags.
@@ -170,7 +171,7 @@ func LoadOAuth(src source.Source) (OAuth, error) {
 
 	keys := []string{"client_id", "token"}
 	for _, v := range src.Unknown("oauth", keys) {
-		errs.Add(v.Path, source.UnknownKey(v.Path, "oauth", keys))
+		errs.Add(v.Path, impl.UnknownKey(v.Path, "oauth", keys))
 	}
 
 	if len(errs) > 0 {
@@ -189,14 +190,14 @@ func LoadOAuth(src source.Source) (OAuth, error) {
 
 // DefineAPIFlags defines on fs2 the flags that LoadAPI reads API from.
 func DefineAPIFlags(fs2 *flag.FlagSet) {
-	source.DefineFlag(fs2, "api-port", "Port is the port the HTTP server listens on. (PORT)", "8080", false)
-	source.DefineFlag(fs2, "api-mode", "API.Mode (API_MODE)", "fast", false)
-	source.DefineFlag(fs2, "api-admin", "API.Admin (API_ADMIN)", "", false)
-	source.DefineFlag(fs2, "api-public", "API.Public (API_PUBLIC)", "", false)
-	source.DefineFlag(fs2, "api-level", "API.Level (API_LEVEL)", "info", false)
-	source.DefineFlag(fs2, "api-listen", "API.Listen (API_LISTEN)", "", false)
-	source.DefineFlag(fs2, "api-name", "API.Name (API_NAME)", "", false)
-	source.DefineFlag(fs2, "api-alias", "API.Alias (API_ALIAS)", "", false)
+	impl.DefineFlag(fs2, "api-port", "Port is the port the HTTP server listens on. (PORT)", "8080", false)
+	impl.DefineFlag(fs2, "api-mode", "API.Mode (API_MODE)", "fast", false)
+	impl.DefineFlag(fs2, "api-admin", "API.Admin (API_ADMIN)", "", false)
+	impl.DefineFlag(fs2, "api-public", "API.Public (API_PUBLIC)", "", false)
+	impl.DefineFlag(fs2, "api-level", "API.Level (API_LEVEL)", "info", false)
+	impl.DefineFlag(fs2, "api-listen", "API.Listen (API_LISTEN)", "", false)
+	impl.DefineFlag(fs2, "api-name", "API.Name (API_NAME)", "", false)
+	impl.DefineFlag(fs2, "api-alias", "API.Alias (API_ALIAS)", "", false)
 }
 
 // LoadAPI reads API from src, and checks it by its validate tags.
@@ -216,7 +217,7 @@ func LoadAPI(src source.Source) (API, error) {
 	} else if ok {
 		pathPort = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
-			errs.Add(pathPort, source.Coded(err, "int"))
+			errs.Add(pathPort, impl.Coded(err, "int"))
 		} else {
 			x.Port = int(n)
 		}
@@ -229,7 +230,7 @@ func LoadAPI(src source.Source) (API, error) {
 	} else if ok {
 		pathMode = v.Path
 		if e, err := NewMode(v.Text); err != nil {
-			errs.Add(pathMode, source.Coded(err, "Mode"))
+			errs.Add(pathMode, impl.Coded(err, "Mode"))
 		} else {
 			x.Mode = e
 		}
@@ -241,7 +242,7 @@ func LoadAPI(src source.Source) (API, error) {
 	} else if ok {
 		pathAdmin = v.Path
 		if o, err := NewEmail(v.Text); err != nil {
-			errs.Add(pathAdmin, source.Coded(err, "Email"))
+			errs.Add(pathAdmin, impl.Coded(err, "Email"))
 		} else {
 			x.Admin = o
 		}
@@ -253,9 +254,9 @@ func LoadAPI(src source.Source) (API, error) {
 	} else if ok {
 		pathPublic = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
-			errs.Add(pathPublic, source.Coded(err, "Port"))
+			errs.Add(pathPublic, impl.Coded(err, "Port"))
 		} else if o, err := NewPort(int(n)); err != nil {
-			errs.Add(pathPublic, source.Coded(err, "Port"))
+			errs.Add(pathPublic, impl.Coded(err, "Port"))
 		} else {
 			x.Public = o
 		}
@@ -268,14 +269,14 @@ func LoadAPI(src source.Source) (API, error) {
 		pathLevel = v.Path
 		var u slog.Level
 		if err := u.UnmarshalText([]byte(v.Text)); err != nil {
-			errs.Add(pathLevel, source.Coded(err, "slog.Level"))
+			errs.Add(pathLevel, impl.Coded(err, "slog.Level"))
 		} else {
 			x.Level = u
 		}
 	} else {
 		var u slog.Level
 		if err := u.UnmarshalText([]byte("info")); err != nil {
-			errs.Add(pathLevel, source.Default(source.Coded(err, "slog.Level")))
+			errs.Add(pathLevel, impl.Default(impl.Coded(err, "slog.Level")))
 		} else {
 			x.Level = u
 		}
@@ -288,7 +289,7 @@ func LoadAPI(src source.Source) (API, error) {
 		pathListen = v.Path
 		var u netip.Addr
 		if err := u.UnmarshalText([]byte(v.Text)); err != nil {
-			errs.Add(pathListen, source.Coded(err, "netip.Addr"))
+			errs.Add(pathListen, impl.Coded(err, "netip.Addr"))
 		} else {
 			x.Listen = u
 		}
@@ -312,7 +313,7 @@ func LoadAPI(src source.Source) (API, error) {
 
 	keys := []string{"admin", "alias", "level", "listen", "mode", "name", "port", "public"}
 	for _, v := range src.Unknown("api", keys) {
-		errs.Add(v.Path, source.UnknownKey(v.Path, "api", keys))
+		errs.Add(v.Path, impl.UnknownKey(v.Path, "api", keys))
 	}
 
 	if len(errs) > 0 {
@@ -363,8 +364,8 @@ func LoadAPI(src source.Source) (API, error) {
 
 // DefinePathsFlags defines on fs2 the flags that LoadPaths reads Paths from.
 func DefinePathsFlags(fs2 *flag.FlagSet) {
-	source.DefineFlag(fs2, "paths-host", "Paths.Host (PATHS_HOST)", "", false)
-	source.DefineFlag(fs2, "paths-host-name", "Paths.HostName (PATHS_HOST_NAME)", "", false)
+	impl.DefineFlag(fs2, "paths-host", "Paths.Host (PATHS_HOST)", "", false)
+	impl.DefineFlag(fs2, "paths-host-name", "Paths.HostName (PATHS_HOST_NAME)", "", false)
 }
 
 // LoadPaths reads Paths from src, and checks it by its validate tags.
@@ -395,7 +396,7 @@ func LoadPaths(src source.Source) (Paths, error) {
 
 	keys := []string{"host", "host_name"}
 	for _, v := range src.Unknown("paths", keys) {
-		errs.Add(v.Path, source.UnknownKey(v.Path, "paths", keys))
+		errs.Add(v.Path, impl.UnknownKey(v.Path, "paths", keys))
 	}
 
 	if len(errs) > 0 {
@@ -429,9 +430,9 @@ func LoadPaths(src source.Source) (Paths, error) {
 
 // DefineLimitsFlags defines on fs2 the flags that LoadLimits reads Limits from.
 func DefineLimitsFlags(fs2 *flag.FlagSet) {
-	source.DefineFlag(fs2, "limits-floor", "Limits.Floor (LIMITS_FLOOR)", "-Inf", false)
-	source.DefineFlag(fs2, "limits-ceiling", "Limits.Ceiling (LIMITS_CEILING)", "+Inf", false)
-	source.DefineFlag(fs2, "limits-scale", "Limits.Scale (LIMITS_SCALE)", "NaN", false)
+	impl.DefineFlag(fs2, "limits-floor", "Limits.Floor (LIMITS_FLOOR)", "-Inf", false)
+	impl.DefineFlag(fs2, "limits-ceiling", "Limits.Ceiling (LIMITS_CEILING)", "+Inf", false)
+	impl.DefineFlag(fs2, "limits-scale", "Limits.Scale (LIMITS_SCALE)", "NaN", false)
 }
 
 // LoadLimits reads Limits from src, and checks it by its validate tags.
@@ -485,7 +486,7 @@ func LoadLimits(src source.Source) (Limits, error) {
 
 	keys := []string{"ceiling", "floor", "scale"}
 	for _, v := range src.Unknown("limits", keys) {
-		errs.Add(v.Path, source.UnknownKey(v.Path, "limits", keys))
+		errs.Add(v.Path, impl.UnknownKey(v.Path, "limits", keys))
 	}
 
 	if len(errs) > 0 {
@@ -504,8 +505,8 @@ func LoadLimits(src source.Source) (Limits, error) {
 
 // DefineUploadFlags defines on fs2 the flags that LoadUpload reads Upload from.
 func DefineUploadFlags(fs2 *flag.FlagSet) {
-	source.DefineFlag(fs2, "upload-dir-mode", "Upload.DirMode (UPLOAD_DIR_MODE)", "0755", false)
-	source.DefineFlag(fs2, "upload-offset", "Upload.Offset (UPLOAD_OFFSET)", "-0x10", false)
+	impl.DefineFlag(fs2, "upload-dir-mode", "Upload.DirMode (UPLOAD_DIR_MODE)", "0755", false)
+	impl.DefineFlag(fs2, "upload-offset", "Upload.Offset (UPLOAD_OFFSET)", "-0x10", false)
 }
 
 // LoadUpload reads Upload from src, and checks it by its validate tags.
@@ -525,7 +526,7 @@ func LoadUpload(src source.Source) (Upload, error) {
 	} else if ok {
 		pathDirMode = v.Path
 		if n, err := strconv.ParseUint(v.Text, 0, 32); err != nil {
-			errs.Add(pathDirMode, source.Coded(err, "fs.FileMode"))
+			errs.Add(pathDirMode, impl.Coded(err, "fs.FileMode"))
 		} else {
 			x.DirMode = fs.FileMode(n)
 		}
@@ -538,7 +539,7 @@ func LoadUpload(src source.Source) (Upload, error) {
 	} else if ok {
 		pathOffset = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 16); err != nil {
-			errs.Add(pathOffset, source.Coded(err, "int16"))
+			errs.Add(pathOffset, impl.Coded(err, "int16"))
 		} else {
 			x.Offset = int16(n)
 		}
@@ -546,7 +547,7 @@ func LoadUpload(src source.Source) (Upload, error) {
 
 	keys := []string{"dir_mode", "offset"}
 	for _, v := range src.Unknown("upload", keys) {
-		errs.Add(v.Path, source.UnknownKey(v.Path, "upload", keys))
+		errs.Add(v.Path, impl.UnknownKey(v.Path, "upload", keys))
 	}
 
 	if len(errs) > 0 {
@@ -557,9 +558,9 @@ func LoadUpload(src source.Source) (Upload, error) {
 
 // DefineFallbackFlags defines on fs2 the flags that LoadFallback reads Fallback from.
 func DefineFallbackFlags(fs2 *flag.FlagSet) {
-	source.DefineFlag(fs2, "fallback-level", "Fallback.Level (FALLBACK_LEVEL)", "loud", false)
-	source.DefineFlag(fs2, "fallback-admin", "Fallback.Admin (FALLBACK_ADMIN)", "ops", false)
-	source.DefineFlag(fs2, "fallback-public", "Fallback.Public (FALLBACK_PUBLIC)", "port", false)
+	impl.DefineFlag(fs2, "fallback-level", "Fallback.Level (FALLBACK_LEVEL)", "loud", false)
+	impl.DefineFlag(fs2, "fallback-admin", "Fallback.Admin (FALLBACK_ADMIN)", "ops", false)
+	impl.DefineFlag(fs2, "fallback-public", "Fallback.Public (FALLBACK_PUBLIC)", "port", false)
 }
 
 // LoadFallback reads Fallback from src, and checks it by its validate tags.
@@ -579,14 +580,14 @@ func LoadFallback(src source.Source) (Fallback, error) {
 		pathLevel = v.Path
 		var u slog.Level
 		if err := u.UnmarshalText([]byte(v.Text)); err != nil {
-			errs.Add(pathLevel, source.Coded(err, "slog.Level"))
+			errs.Add(pathLevel, impl.Coded(err, "slog.Level"))
 		} else {
 			x.Level = u
 		}
 	} else {
 		var u slog.Level
 		if err := u.UnmarshalText([]byte("loud")); err != nil {
-			errs.Add(pathLevel, source.Default(source.Coded(err, "slog.Level")))
+			errs.Add(pathLevel, impl.Default(impl.Coded(err, "slog.Level")))
 		} else {
 			x.Level = u
 		}
@@ -598,13 +599,13 @@ func LoadFallback(src source.Source) (Fallback, error) {
 	} else if ok {
 		pathAdmin = v.Path
 		if o, err := NewEmail(v.Text); err != nil {
-			errs.Add(pathAdmin, source.Coded(err, "Email"))
+			errs.Add(pathAdmin, impl.Coded(err, "Email"))
 		} else {
 			x.Admin = o
 		}
 	} else {
 		if o, err := NewEmail("ops"); err != nil {
-			errs.Add(pathAdmin, source.Default(source.Coded(err, "Email")))
+			errs.Add(pathAdmin, impl.Default(impl.Coded(err, "Email")))
 		} else {
 			x.Admin = o
 		}
@@ -616,17 +617,17 @@ func LoadFallback(src source.Source) (Fallback, error) {
 	} else if ok {
 		pathPublic = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
-			errs.Add(pathPublic, source.Coded(err, "Port"))
+			errs.Add(pathPublic, impl.Coded(err, "Port"))
 		} else if o, err := NewPort(int(n)); err != nil {
-			errs.Add(pathPublic, source.Coded(err, "Port"))
+			errs.Add(pathPublic, impl.Coded(err, "Port"))
 		} else {
 			x.Public = o
 		}
 	} else {
 		if n, err := strconv.ParseInt("port", 0, 0); err != nil {
-			errs.Add(pathPublic, source.Default(source.Coded(err, "Port")))
+			errs.Add(pathPublic, impl.Default(impl.Coded(err, "Port")))
 		} else if o, err := NewPort(int(n)); err != nil {
-			errs.Add(pathPublic, source.Default(source.Coded(err, "Port")))
+			errs.Add(pathPublic, impl.Default(impl.Coded(err, "Port")))
 		} else {
 			x.Public = o
 		}
@@ -634,7 +635,7 @@ func LoadFallback(src source.Source) (Fallback, error) {
 
 	keys := []string{"admin", "level", "public"}
 	for _, v := range src.Unknown("fallback", keys) {
-		errs.Add(v.Path, source.UnknownKey(v.Path, "fallback", keys))
+		errs.Add(v.Path, impl.UnknownKey(v.Path, "fallback", keys))
 	}
 
 	if len(errs) > 0 {
@@ -645,7 +646,7 @@ func LoadFallback(src source.Source) (Fallback, error) {
 
 // DefineReplicaFlags defines on fs2 the flags that LoadReplica reads Replica from.
 func DefineReplicaFlags(fs2 *flag.FlagSet) {
-	source.DefineFlag(fs2, "database-replica-url", "Replica.ReplicaURL (DATABASE_REPLICA_URL)", "", false)
+	impl.DefineFlag(fs2, "database-replica-url", "Replica.ReplicaURL (DATABASE_REPLICA_URL)", "", false)
 }
 
 // LoadReplica reads Replica from src, and checks it by its validate tags.
@@ -666,7 +667,7 @@ func LoadReplica(src source.Source) (Replica, error) {
 
 	keys := []string{"admin_url", "debug", "dial_timeout", "pool_max_conns", "ratio", "replica_url", "retries", "writer_url"}
 	for _, v := range src.Unknown("database", keys) {
-		errs.Add(v.Path, source.UnknownKey(v.Path, "database", keys))
+		errs.Add(v.Path, impl.UnknownKey(v.Path, "database", keys))
 	}
 
 	if len(errs) > 0 {

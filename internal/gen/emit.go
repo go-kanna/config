@@ -35,7 +35,8 @@ func emit(pkgPath, pkgName string, found []target, declared []string) *gofile.Fi
 	f.Reserve(taken...)
 	w := validation.NewWriter(f, planned, taken)
 
-	e := &emitter{f: f, w: w, src: f.Import(sourcePath, "source"), keys: sectionKeys(found)}
+	e := &emitter{f: f, w: w, src: f.Import(sourcePath, "source"), impl: f.Import(implPath, "impl"),
+		keys: sectionKeys(found)}
 	for _, t := range found {
 		e.importAll(t)
 	}
@@ -57,6 +58,9 @@ type emitter struct {
 
 	// src is the name the file imports package source under.
 	src string
+
+	// impl is the name the file imports package impl under.
+	impl string
 
 	// keys are the keys of each section, of every struct reading it.
 	keys map[string][]string
@@ -113,7 +117,7 @@ func (e *emitter) define(t target) {
 		if fd.usage != "" {
 			usage = fmt.Sprintf("%s (%s)", fd.usage, fd.key.env)
 		}
-		e.printf("%s.DefineFlag(%s, %q, %q, %q, %t)\n", e.src, fs, fd.key.flag, usage, def, fd.read.kind == readBool)
+		e.printf("%s.DefineFlag(%s, %q, %q, %q, %t)\n", e.impl, fs, fd.key.flag, usage, def, fd.read.kind == readBool)
 	}
 	e.printf("}\n\n")
 }
@@ -188,7 +192,7 @@ type loader struct {
 // while a default is read.
 func (l *loader) fail(err string) string {
 	if l.def {
-		return fmt.Sprintf("%s.Default(%s)", l.src, err)
+		return fmt.Sprintf("%s.Default(%s)", l.impl, err)
 	}
 	return err
 }
@@ -203,7 +207,7 @@ func (l *loader) unknown() {
 	v, name := l.locals["v"], l.locals["keys"]
 	l.printf("\n%s := []string{%s}\n", name, strings.Join(keys, ", "))
 	l.printf("for _, %s := range %s.Unknown(%q, %s) {\n%s.Add(%s.Path, %s.UnknownKey(%s.Path, %q, %s))\n}\n",
-		v, l.in, l.t.section, name, l.errs, v, l.src, v, l.t.section, name)
+		v, l.in, l.t.section, name, l.errs, v, l.impl, v, l.t.section, name)
 }
 
 // needsPath reports whether the path of fd's setting is needed beyond where it
@@ -329,7 +333,7 @@ func (l *loader) construct(
 
 // coded returns what reports err, returned for a value of type typeName.
 func (l *loader) coded(err, typeName string) string {
-	return l.fail(fmt.Sprintf("%s.Coded(%s, %q)", l.src, err, typeName))
+	return l.fail(fmt.Sprintf("%s.Coded(%s, %q)", l.impl, err, typeName))
 }
 
 // is reports whether t is the predeclared type kind itself, which a value

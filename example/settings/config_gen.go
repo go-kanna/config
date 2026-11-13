@@ -8,15 +8,16 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-kanna/config/impl"
 	"github.com/go-kanna/config/source"
 	"github.com/go-kanna/validator"
 )
 
 // DefineServerFlags defines on fs the flags that LoadServer reads Server from.
 func DefineServerFlags(fs *flag.FlagSet) {
-	source.DefineFlag(fs, "server-port", "Port is the port the server listens on. (PORT)", "8080", false)
-	source.DefineFlag(fs, "server-timeout", "Timeout bounds the time a request takes. (SERVER_TIMEOUT)", "5s", false)
-	source.DefineFlag(fs, "server-level", "Server.Level (SERVER_LEVEL)", "info", false)
+	impl.DefineFlag(fs, "server-port", "Port is the port the server listens on. (PORT)", "8080", false)
+	impl.DefineFlag(fs, "server-timeout", "Timeout bounds the time a request takes. (SERVER_TIMEOUT)", "5s", false)
+	impl.DefineFlag(fs, "server-level", "Server.Level (SERVER_LEVEL)", "info", false)
 }
 
 // LoadServer reads Server from src, and checks it by its validate tags.
@@ -36,7 +37,7 @@ func LoadServer(src source.Source) (Server, error) {
 	} else if ok {
 		pathPort = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 0); err != nil {
-			errs.Add(pathPort, source.Coded(err, "int"))
+			errs.Add(pathPort, impl.Coded(err, "int"))
 		} else {
 			x.Port = int(n)
 		}
@@ -62,14 +63,14 @@ func LoadServer(src source.Source) (Server, error) {
 		pathLevel = v.Path
 		var u slog.Level
 		if err := u.UnmarshalText([]byte(v.Text)); err != nil {
-			errs.Add(pathLevel, source.Coded(err, "slog.Level"))
+			errs.Add(pathLevel, impl.Coded(err, "slog.Level"))
 		} else {
 			x.Level = u
 		}
 	} else {
 		var u slog.Level
 		if err := u.UnmarshalText([]byte("info")); err != nil {
-			errs.Add(pathLevel, source.Default(source.Coded(err, "slog.Level")))
+			errs.Add(pathLevel, impl.Default(impl.Coded(err, "slog.Level")))
 		} else {
 			x.Level = u
 		}
@@ -77,7 +78,7 @@ func LoadServer(src source.Source) (Server, error) {
 
 	keys := []string{"level", "port", "timeout"}
 	for _, v := range src.Unknown("server", keys) {
-		errs.Add(v.Path, source.UnknownKey(v.Path, "server", keys))
+		errs.Add(v.Path, impl.UnknownKey(v.Path, "server", keys))
 	}
 
 	if len(errs) > 0 {
@@ -99,8 +100,8 @@ func LoadServer(src source.Source) (Server, error) {
 
 // DefineDatabaseFlags defines on fs the flags that LoadDatabase reads Database from.
 func DefineDatabaseFlags(fs *flag.FlagSet) {
-	source.DefineFlag(fs, "database-writer-url", "Database.WriterURL (DATABASE_WRITER_URL)", "", false)
-	source.DefineFlag(fs, "database-pool-max-conns", "Database.PoolMaxConns (DATABASE_POOL_MAX_CONNS)", "10", false)
+	impl.DefineFlag(fs, "database-writer-url", "Database.WriterURL (DATABASE_WRITER_URL)", "", false)
+	impl.DefineFlag(fs, "database-pool-max-conns", "Database.PoolMaxConns (DATABASE_POOL_MAX_CONNS)", "10", false)
 }
 
 // LoadDatabase reads Database from src, and checks it by its validate tags.
@@ -128,7 +129,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 	} else if ok {
 		pathPoolMaxConns = v.Path
 		if n, err := strconv.ParseInt(v.Text, 0, 32); err != nil {
-			errs.Add(pathPoolMaxConns, source.Coded(err, "int32"))
+			errs.Add(pathPoolMaxConns, impl.Coded(err, "int32"))
 		} else {
 			x.PoolMaxConns = int32(n)
 		}
@@ -136,7 +137,7 @@ func LoadDatabase(src source.Source) (Database, error) {
 
 	keys := []string{"pool_max_conns", "writer_url"}
 	for _, v := range src.Unknown("database", keys) {
-		errs.Add(v.Path, source.UnknownKey(v.Path, "database", keys))
+		errs.Add(v.Path, impl.UnknownKey(v.Path, "database", keys))
 	}
 
 	if len(errs) > 0 {
