@@ -35,6 +35,9 @@ const (
 
 	// sourcePath is the package the generated code finds settings with.
 	sourcePath = "github.com/go-kanna/config/source"
+
+	// implPath is the package the generated code reports and defines flags with.
+	implPath = "github.com/go-kanna/config/impl"
 )
 
 // The tags of caarlos0/env that kanna-config does not read, and what to write
