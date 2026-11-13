@@ -111,6 +111,12 @@ db, err := config.LoadDatabase(src)
 validator: DATABASE_WRITER_URL: blank; database.pool_max_conns: greater_than_or_equal_to (count=1)
 ```
 
+`Database.AdminURL` は `DATABASE_ADMIN_URL` から読まれ、`kanna-orm describe` が `-database-url` を渡されないときに読む `DATABASE_URL` とは別の変数です。管理用の接続で describe するときは、この変数をフラグで渡します:
+
+```sh
+go tool kanna-orm describe -database-url "$DATABASE_ADMIN_URL" ./...
+```
+
 ## 名前
 
 各フィールドが 1 つの設定で、語の並びで名前が決まります。構造体の語、続いてフィールドの語です。語の分け方は、kanna-orm がフィールドから列の名前を作るのと同じです。出どころごとに、その語を自分の書き方で綴ります:
