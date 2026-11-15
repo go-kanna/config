@@ -142,11 +142,11 @@ type OAuth struct {
 
 The words of a field are written likewise with `config:"…"`, such as `config:"oauth_token"` for a field `OAuthToken`. A variable a platform names, such as the `PORT` of Cloud Run, is written whole with `env:"…"`, which takes no prefix and changes the variable alone. Words the convention would give anyway may be written too, to keep a name when the Go name changes.
 
-A name of `env:"…"` is read as written, lower case included (`http_proxy`), but for an empty one and one holding `=` or NUL, which no variable has. As in a json tag, the name ends at the first comma: an option after it stops the run, as kanna-config takes none. Two fields of one struct reading one setting stop the run, as does a field whose variable names the file of another's, such as `PasswordFile` beside `Password`.
+A name of `env:"…"` is read as written, lower case included (`http_proxy`), except an empty one and one holding `=` or NUL, which no variable has. As in a json tag, the name ends at the first comma: an option after it stops the run, as kanna-config takes none. Two fields of one struct reading one setting stop the run, as does a field whose variable names the file of another's, such as `PasswordFile` beside `Password`.
 
 ## Sources
 
-A setting is looked for in the flags, then in the environment, then in the files, the last first, and the first to give it text gives its value. An empty text gives none, as an unset one does: An exported `DATABASE_POOL_MAX_CONNS=` is the same as an unset variable.
+A setting is looked for in the flags, then in the environment, then in the files, the last first, and the first to give it text gives its value. An empty text gives none, as an unset one does: an exported `DATABASE_POOL_MAX_CONNS=` is the same as an unset variable.
 
 kanna-config reads no `.env` file. The environment is the process's own, so load such a file before `source.Open` with a
 library such as godotenv, or let the shell or the runtime export it.
